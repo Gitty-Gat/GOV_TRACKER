@@ -86,7 +86,11 @@ def list_services(settings: Settings, owner_id: str) -> list[dict]:
         timeout=30,
     )
     response.raise_for_status()
-    return response.json()
+    services = []
+    for item in response.json():
+        service = item.get("service", item)
+        services.append(service)
+    return services
 
 
 def find_existing_service(settings: Settings, owner_id: str) -> dict | None:
