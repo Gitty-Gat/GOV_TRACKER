@@ -1,0 +1,142 @@
+from __future__ import annotations
+
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+
+class OfficialCard(BaseModel):
+    bioguide_id: str
+    name: str
+    chamber: str
+    state: str
+    district: int | None = None
+    party: str | None = None
+    image_url: str | None = None
+    website_url: str | None = None
+
+
+class PromiseItem(BaseModel):
+    title: str
+    description: str
+    topic: str
+    source_label: str
+    source_url: str | None = None
+    confidence: float = 0.0
+    provenance: Literal["manual", "inferred"] = "inferred"
+    evidence: str | None = None
+
+
+class BillRecord(BaseModel):
+    title: str
+    bill_number: str
+    congress: int
+    introduced_date: str | None = None
+    policy_area: str = "Unspecified"
+    latest_action_text: str = ""
+    latest_action_date: str | None = None
+    url: str | None = None
+    sponsorship: Literal["sponsored", "cosponsored"] = "sponsored"
+    stage: str = "introduced"
+    stage_weight: float = 0.0
+
+
+class PolicyAreaStat(BaseModel):
+    name: str
+    weight: float
+    bill_count: int
+
+
+class ActivitySummary(BaseModel):
+    sponsored_count_total: int = 0
+    cosponsored_count_total: int = 0
+    enacted_count: int = 0
+    passed_count: int = 0
+    committee_progress_count: int = 0
+    sampled_sponsored_count: int = 0
+    sampled_cosponsored_count: int = 0
+    top_policy_areas: list[PolicyAreaStat] = Field(default_factory=list)
+    recent_bills: list[BillRecord] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class DonorRecipient(BaseModel):
+    name: str
+    amount: float
+    recipient: str | None = None
+    candidate_name: str | None = None
+    committee_id: str | None = None
+
+
+class DonorRecord(BaseModel):
+    name: str
+    amount: float
+    donor_type: str
+    city: str | None = None
+    state: str | None = None
+    employer: str | None = None
+    occupation: str | None = None
+    contributor_id: str | None = None
+    source_url: str | None = None
+    other_recipients: list[DonorRecipient] = Field(default_factory=list)
+
+
+class StateContribution(BaseModel):
+    state: str
+    amount: float
+
+
+class PacAuditTrail(BaseModel):
+    pac_name: str
+    pac_committee_id: str | None = None
+    amount_to_official: float = 0.0
+    inbound_sources: list[DonorRecord] = Field(default_factory=list)
+    outbound_targets: list[DonorRecipient] = Field(default_factory=list)
+
+
+class FinanceSummary(BaseModel):
+    available: bool = False
+    warning: str | None = None
+    candidate_id: str | None = None
+    principal_committee_id: str | None = None
+    principal_committee_name: str | None = None
+    cycle: int | None = None
+    total_raised: float = 0.0
+    cash_on_hand: float = 0.0
+    disbursements: float = 0.0
+    individual_contributions: float = 0.0
+    pac_contributions: float = 0.0
+    transfer_contributions: float = 0.0
+    constituent_share: float | None = None
+    pac_share: float | None = None
+    itemized_share: float | None = None
+    donor_state_totals: list[StateContribution] = Field(default_factory=list)
+    top_donors: list[DonorRecord] = Field(default_factory=list)
+    top_pac_donors: list[DonorRecord] = Field(default_factory=list)
+    pac_audit_trails: list[PacAuditTrail] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class PromiseTopicScore(BaseModel):
+    topic: str
+    promise_title: str
+    score: int
+    matched_actions: list[BillRecord] = Field(default_factory=list)
+    rationale: str
+
+
+class DeliveryScore(BaseModel):
+    overall_score: int = 0
+    label: str = "Insufficient data"
+    explanation: str = ""
+    topic_scores: list[PromiseTopicScore] = Field(default_factory=list)
+
+
+class OfficialDetail(BaseModel):
+    member: dict[str, Any]
+    card: OfficialCard
+    activity: ActivitySummary
+    finance: FinanceSummary
+    promises: list[PromiseItem]
+    delivery_score: DeliveryScore
+    methodology_notes: list[str] = Field(default_factory=list)

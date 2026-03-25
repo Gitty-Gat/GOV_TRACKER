@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Civic Ledger{% endblock %}
+{% block content %}
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Federal oversight dashboard</p>
+      <h1>See who funds members of Congress and what they are doing with the office.</h1>
+      <p class="lede">
+        Filter the House and Senate, open a member profile, and compare campaign finance against recent legislative output.
+      </p>
+    </div>
+    <div class="hero-stats">
+      <div class="metric-card accent">
+        <span class="metric-label">Visible officials</span>
+        <strong>{{ stats.official_count }}</strong>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">House</span>
+        <strong>{{ stats.house_count }}</strong>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Senate</span>
+        <strong>{{ stats.senate_count }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <form class="filters" method="get">
+      <label>
+        <span>Search</span>
+        <input type="text" name="search" value="{{ filters.search }}" placeholder="Name or state">
+      </label>
+      <label>
+        <span>Chamber</span>
+        <select name="chamber">
+          <option value="">All</option>
+          <option value="House of Representatives" {% if filters.chamber == "House of Representatives" %}selected{% endif %}>House</option>
+          <option value="Senate" {% if filters.chamber == "Senate" %}selected{% endif %}>Senate</option>
+        </select>
+      </label>
+      <label>
+        <span>Party</span>
+        <select name="party">
+          <option value="">All</option>
+          <option value="Democratic" {% if filters.party == "Democratic" %}selected{% endif %}>Democratic</option>
+          <option value="Republican" {% if filters.party == "Republican" %}selected{% endif %}>Republican</option>
+          <option value="Independent" {% if filters.party == "Independent" %}selected{% endif %}>Independent</option>
+        </select>
+      </label>
+      <label>
+        <span>State</span>
+        <select name="state">
+          <option value="">All</option>
+          {% for option in state_options %}
+            <option value="{{ option }}" {% if filters.state == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="button-primary" type="submit">Apply filters</button>
+    </form>
+  </section>
+
+  <section class="card-grid">
+    {% for official in officials %}
+      <a class="official-card" href="{{ request.url_for('official_detail', bioguide_id=official.bioguide_id) }}">
+        <div class="official-card-head">
+          {% if official.image_url %}
+            <img src="{{ official.image_url }}" alt="{{ official.name }}">
+          {% else %}
+            <div class="avatar-fallback">{{ official.name[:1] }}</div>
+          {% endif %}
+          <div>
+            <span class="chip">{{ "House" if official.chamber == "House of Representatives" else "Senate" }}</span>
+            <h3>{{ official.name }}</h3>
+            <p>{{ official.state }}{% if official.district %} · District {{ official.district }}{% endif %}</p>
+          </div>
+        </div>
+        <div class="official-card-foot">
+          <span>{{ official.party or "Unknown party" }}</span>
+          <span>Open profile</span>
+        </div>
+      </a>
+    {% endfor %}
+  </section>
+{% endblock %}

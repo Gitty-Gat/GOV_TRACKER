@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Civic Ledger{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+    <script defer src="{{ url_for('static', path='app.js') }}"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar">
+        <a class="brand" href="{{ request.url_for('home') }}">
+          <span class="brand-mark">CL</span>
+          <span>
+            <strong>Civic Ledger</strong>
+            <small>House + Senate influence dashboard</small>
+          </span>
+        </a>
+        <div class="sidebar-panel">
+          <p class="eyebrow">Method</p>
+          <h2>Trace the money. Compare the work.</h2>
+          <p>
+            Campaign finance, PAC trails, recent legislative actions, and a transparent promise-delivery score.
+          </p>
+        </div>
+        <div class="sidebar-panel muted">
+          <p class="eyebrow">Data sources</p>
+          <ul class="sidebar-list">
+            <li>Congress.gov</li>
+            <li>OpenFEC</li>
+            <li>Official member websites</li>
+          </ul>
+        </div>
+      </aside>
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </body>
+</html>
