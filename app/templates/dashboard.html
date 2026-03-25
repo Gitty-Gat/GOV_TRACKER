@@ -25,6 +25,18 @@
     </div>
   </section>
 
+  <section class="panel metric-explainer">
+    <p class="eyebrow">Efficiency metric</p>
+    <h2>How the score works</h2>
+    <p>
+      The efficiency metric blends legislative throughput per year in office, bonuses for bills that moved beyond committee,
+      and a commitment adjustment based on how closely recent activity matches stated priorities.
+    </p>
+    <p class="tiny-note">
+      The PAC-alignment signal is a proxy ranking, not a proof of influence. It increases when PAC reliance is higher and visible priority follow-through is lower.
+    </p>
+  </section>
+
   <section class="panel">
     <form class="filters" method="get">
       <label>
@@ -57,6 +69,16 @@
           {% endfor %}
         </select>
       </label>
+      <label>
+        <span>Sort</span>
+        <select name="sort">
+          <option value="name" {% if filters.sort == "name" %}selected{% endif %}>Name</option>
+          <option value="money_desc" {% if filters.sort == "money_desc" %}selected{% endif %}>Most money raised</option>
+          <option value="efficiency_asc" {% if filters.sort == "efficiency_asc" %}selected{% endif %}>Lowest efficiency</option>
+          <option value="commitment_asc" {% if filters.sort == "commitment_asc" %}selected{% endif %}>Least commitment to priorities</option>
+          <option value="pac_alignment_desc" {% if filters.sort == "pac_alignment_desc" %}selected{% endif %}>Highest PAC-alignment signal</option>
+        </select>
+      </label>
       <button class="button-primary" type="submit">Apply filters</button>
     </form>
   </section>
@@ -66,7 +88,7 @@
       <a class="official-card" href="{{ request.url_for('official_detail', bioguide_id=official.bioguide_id) }}">
         <div class="official-card-head">
           {% if official.image_url %}
-            <img src="{{ official.image_url }}" alt="{{ official.name }}">
+            <img src="{{ official.image_url }}" data-fallback-src="{{ official.image_fallback_url or '' }}" alt="{{ official.name }}">
           {% else %}
             <div class="avatar-fallback">{{ official.name[:1] }}</div>
           {% endif %}
@@ -76,11 +98,63 @@
             <p>{{ official.state }}{% if official.district %} · District {{ official.district }}{% endif %}</p>
           </div>
         </div>
+        <div class="card-metrics">
+          <div class="metric-line">
+            <span>Raised last cycle</span>
+            <strong>
+              {% if official.total_raised is not none %}
+                ${{ "{:,.0f}".format(official.total_raised) }}
+              {% else %}
+                Not cached
+              {% endif %}
+            </strong>
+          </div>
+          <div class="metric-line">
+            <span>Efficiency metric</span>
+            <strong>
+              {% if official.efficiency_score is not none %}
+                {{ official.efficiency_score }}
+              {% else %}
+                Pending
+              {% endif %}
+            </strong>
+          </div>
+          <div class="metric-line">
+            <span>Top donors</span>
+            <strong class="donor-line">
+              {% if official.top_donor_names %}
+                {{ official.top_donor_names|join(", ") }}
+              {% else %}
+                Open card to warm donor summary
+              {% endif %}
+            </strong>
+          </div>
+        </div>
         <div class="official-card-foot">
           <span>{{ official.party or "Unknown party" }}</span>
-          <span>Open profile</span>
+          <span>
+            {% if official.priority_commitment_score is not none %}
+              Priority fit {{ official.priority_commitment_score }}
+            {% else %}
+              Open profile
+            {% endif %}
+          </span>
         </div>
       </a>
     {% endfor %}
+  </section>
+
+  <section class="pagination-row">
+    {% if pagination.page > 1 %}
+      <a class="pagination-link" href="?search={{ filters.search }}&chamber={{ filters.chamber }}&party={{ filters.party }}&state={{ filters.state }}&sort={{ filters.sort }}&page={{ pagination.page - 1 }}">Previous</a>
+    {% else %}
+      <span class="pagination-link disabled">Previous</span>
+    {% endif %}
+    <span>Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+    {% if pagination.page < pagination.total_pages %}
+      <a class="pagination-link" href="?search={{ filters.search }}&chamber={{ filters.chamber }}&party={{ filters.party }}&state={{ filters.state }}&sort={{ filters.sort }}&page={{ pagination.page + 1 }}">Next</a>
+    {% else %}
+      <span class="pagination-link disabled">Next</span>
+    {% endif %}
   </section>
 {% endblock %}

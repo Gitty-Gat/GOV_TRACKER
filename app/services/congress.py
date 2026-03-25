@@ -163,7 +163,7 @@ class CongressService:
                         bill_number=f"{bill_type} {number}".strip().upper(),
                         congress=int(item.get("congress", self.settings.current_congress)),
                         introduced_date=item.get("introducedDate"),
-                        policy_area=(item.get("policyArea") or {}).get("name", "Unspecified"),
+                        policy_area=((item.get("policyArea") or {}).get("name") or "Unspecified"),
                         latest_action_text=item.get("latestAction", {}).get("text", ""),
                         latest_action_date=item.get("latestAction", {}).get("actionDate"),
                         url=item.get("url"),
@@ -190,6 +190,7 @@ class CongressService:
             "district": member.get("district"),
             "party": _normalize_party(member.get("partyName")),
             "image_url": (member.get("depiction") or {}).get("imageUrl"),
+            "image_fallback_url": _bioguide_photo_url(member["bioguideId"]),
             "website_url": member.get("officialWebsiteUrl"),
             "first_name": _parse_first_last(member.get("name") or "")[0],
             "last_name": _parse_first_last(member.get("name") or "")[1],
@@ -208,6 +209,7 @@ class CongressService:
             "district": member.get("district"),
             "party": _normalize_party(current_party),
             "image_url": (member.get("depiction") or {}).get("imageUrl"),
+            "image_fallback_url": _bioguide_photo_url(member["bioguideId"]),
             "website_url": member.get("officialWebsiteUrl"),
             "first_name": member.get("firstName"),
             "last_name": member.get("lastName"),
@@ -248,6 +250,7 @@ class CongressService:
                     "district": int(term["district"]) if term.get("district") else None,
                     "party": _normalize_party(term.get("party")),
                     "image_url": f"https://www.congress.gov/img/member/{bioguide_id.lower()}_200.jpg",
+                    "image_fallback_url": _bioguide_photo_url(bioguide_id),
                     "website_url": term.get("url"),
                     "first_name": item.get("name", {}).get("first"),
                     "last_name": item.get("name", {}).get("last"),
@@ -321,6 +324,10 @@ def _normalize_party(value: str | None) -> str | None:
     if value == "Democrat":
         return "Democratic"
     return value
+
+
+def _bioguide_photo_url(bioguide_id: str) -> str:
+    return f"https://bioguide.congress.gov/bioguide/photo/{bioguide_id[0].upper()}/{bioguide_id.upper()}.jpg"
 
 
 STATE_NAMES = {

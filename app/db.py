@@ -44,6 +44,7 @@ class Database:
                     district INTEGER,
                     party TEXT,
                     image_url TEXT,
+                    image_fallback_url TEXT,
                     website_url TEXT,
                     payload TEXT NOT NULL,
                     updated_at TEXT NOT NULL
@@ -63,6 +64,12 @@ class Database:
                 );
                 """
             )
+            columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(officials)").fetchall()
+            }
+            if "image_fallback_url" not in columns:
+                connection.execute("ALTER TABLE officials ADD COLUMN image_fallback_url TEXT")
 
     def set_meta(self, key: str, value: str) -> None:
         with self.connect() as connection:
@@ -99,10 +106,11 @@ class Database:
                     district,
                     party,
                     image_url,
+                    image_fallback_url,
                     website_url,
                     payload,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(bioguide_id)
                 DO UPDATE SET
                     name = excluded.name,
@@ -111,6 +119,7 @@ class Database:
                     district = excluded.district,
                     party = excluded.party,
                     image_url = excluded.image_url,
+                    image_fallback_url = excluded.image_fallback_url,
                     website_url = excluded.website_url,
                     payload = excluded.payload,
                     updated_at = excluded.updated_at
@@ -123,6 +132,7 @@ class Database:
                     official.get("district"),
                     official.get("party"),
                     official.get("image_url"),
+                    official.get("image_fallback_url"),
                     official.get("website_url"),
                     json.dumps(official),
                     utc_now_iso(),
@@ -154,7 +164,7 @@ class Database:
 
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         query = (
-            "SELECT bioguide_id, name, chamber, state, district, party, image_url, website_url "
+            "SELECT bioguide_id, name, chamber, state, district, party, image_url, image_fallback_url, website_url "
             f"FROM officials {where} ORDER BY chamber, state, name"
         )
         with self.connect() as connection:
@@ -168,6 +178,7 @@ class Database:
                 district=row["district"],
                 party=row["party"],
                 image_url=row["image_url"],
+                image_fallback_url=row["image_fallback_url"],
                 website_url=row["website_url"],
             )
             for row in rows
@@ -186,11 +197,16 @@ class Database:
             ).fetchone()
         return json.loads(row["payload"]) if row else None
 
+    def list_official_payloads(self) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            rows = connection.execute("SELECT payload FROM officials").fetchall()
+        return [json.loads(row["payload"]) for row in rows]
+
     def get_official_card(self, bioguide_id: str) -> OfficialCard | None:
         with self.connect() as connection:
             row = connection.execute(
                 """
-                SELECT bioguide_id, name, chamber, state, district, party, image_url, website_url
+                SELECT bioguide_id, name, chamber, state, district, party, image_url, image_fallback_url, website_url
                 FROM officials
                 WHERE bioguide_id = ?
                 """,
@@ -206,6 +222,7 @@ class Database:
             district=row["district"],
             party=row["party"],
             image_url=row["image_url"],
+            image_fallback_url=row["image_fallback_url"],
             website_url=row["website_url"],
         )
 

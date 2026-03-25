@@ -6,7 +6,7 @@
   <section class="detail-hero">
     <div class="profile-block">
       {% if detail.card.image_url %}
-        <img class="profile-photo" src="{{ detail.card.image_url }}" alt="{{ detail.card.name }}">
+        <img class="profile-photo" src="{{ detail.card.image_url }}" data-fallback-src="{{ detail.card.image_fallback_url or '' }}" alt="{{ detail.card.name }}">
       {% else %}
         <div class="profile-photo fallback">{{ detail.card.name[:1] }}</div>
       {% endif %}
@@ -56,6 +56,18 @@
         {% endif %}
       </strong>
     </article>
+  </section>
+
+  <section class="panel metric-explainer">
+    <p class="eyebrow">Efficiency metric</p>
+    <h2>What the score means</h2>
+    <p>
+      This score starts with sponsored and cosponsored bill volume per year in office, then adds weight for bills that advanced,
+      and finally adjusts for how closely recent activity matches the official's stated priorities.
+    </p>
+    <p class="tiny-note">
+      It is an evidence-based operating score, not a judgment about ideology or intent.
+    </p>
   </section>
 
   <section class="split-grid">

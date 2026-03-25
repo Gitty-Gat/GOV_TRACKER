@@ -13,7 +13,30 @@ class OfficialCard(BaseModel):
     district: int | None = None
     party: str | None = None
     image_url: str | None = None
+    image_fallback_url: str | None = None
     website_url: str | None = None
+    total_raised: float | None = None
+    cash_on_hand: float | None = None
+    top_donor_names: list[str] = Field(default_factory=list)
+    efficiency_score: int | None = None
+    priority_commitment_score: int | None = None
+    pac_alignment_signal: int | None = None
+    pac_share: float | None = None
+    finance_available: bool = False
+
+
+class DirectoryMetric(BaseModel):
+    finance_available: bool = False
+    candidate_id: str | None = None
+    principal_committee_id: str | None = None
+    total_raised: float | None = None
+    cash_on_hand: float | None = None
+    pac_share: float | None = None
+    top_donor_names: list[str] = Field(default_factory=list)
+    efficiency_score: int | None = None
+    priority_commitment_score: int | None = None
+    pac_alignment_signal: int | None = None
+    years_in_office: int | None = None
 
 
 class PromiseItem(BaseModel):

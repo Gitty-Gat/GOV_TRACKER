@@ -14,8 +14,9 @@ def list_officials(
     chamber: str | None = Query(default=None),
     party: str | None = Query(default=None),
     state: str | None = Query(default=None),
+    sort: str = Query(default="name"),
 ):
-    officials = service.list_officials(search=search, chamber=chamber, party=party, state=state)
+    officials = service.list_officials(search=search, chamber=chamber, party=party, state=state, sort_by=sort)
     return {"results": [official.model_dump(mode="json") for official in officials], "count": len(officials)}
 
 
