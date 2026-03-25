@@ -3,15 +3,15 @@
 {% block content %}
   <section class="hero">
     <div>
-      <p class="eyebrow">Federal oversight dashboard</p>
-      <h1>See who funds members of Congress and what they are doing with the office.</h1>
+      <p class="eyebrow">Congress dashboard</p>
+      <h1>See who funds Congress and what each officeholder gets done.</h1>
       <p class="lede">
-        Filter the House and Senate, open a member profile, and compare campaign finance against recent legislative output.
+        Search the House and Senate. Open any profile. Compare money, donors, and work in office.
       </p>
     </div>
     <div class="hero-stats">
       <div class="metric-card accent">
-        <span class="metric-label">Visible officials</span>
+        <span class="metric-label">Shown now</span>
         <strong>{{ stats.official_count }}</strong>
       </div>
       <div class="metric-card">
@@ -27,13 +27,13 @@
 
   <section class="panel metric-explainer">
     <p class="eyebrow">Efficiency metric</p>
-    <h2>How the score works</h2>
+    <h2>What the score means</h2>
     <p>
-      The efficiency metric blends legislative throughput per year in office, bonuses for bills that moved beyond committee,
-      and a commitment adjustment based on how closely recent activity matches stated priorities.
+      This score looks at how much work an official moves each year in office.
+      It gives more credit when bills move forward and when recent work matches stated priorities.
     </p>
     <p class="tiny-note">
-      On the directory, commitment uses the full promise-to-action score when cached and a lighter activity proxy otherwise. The PAC-alignment signal is a proxy ranking, not a proof of influence.
+      The donor alignment sort is a signal, not proof. It rises when PAC support is higher and visible follow-through is lower.
     </p>
   </section>
 
@@ -79,7 +79,7 @@
           <option value="pac_alignment_desc" {% if filters.sort == "pac_alignment_desc" %}selected{% endif %}>Highest PAC-alignment signal</option>
         </select>
       </label>
-      <button class="button-primary" type="submit">Apply filters</button>
+      <button class="button-primary" type="submit">Update view</button>
     </form>
   </section>
 
@@ -125,7 +125,7 @@
               {% if official.top_donor_names %}
                 {{ official.top_donor_names|join(", ") }}
               {% else %}
-                Open card to warm donor summary
+                Loading when available
               {% endif %}
             </strong>
           </div>
@@ -134,7 +134,7 @@
           <span>{{ official.party or "Unknown party" }}</span>
           <span>
             {% if official.priority_commitment_score is not none %}
-              Priority fit {{ official.priority_commitment_score }}
+              Keeps promises {{ official.priority_commitment_score }}
             {% else %}
               Open profile
             {% endif %}

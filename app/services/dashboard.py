@@ -25,7 +25,10 @@ class DashboardService:
         force_sync: bool = False,
     ):
         self.congress.ensure_current_members(force=force_sync)
-        self.fec.sync_directory_finance_metrics(force=force_sync)
+        try:
+            self.fec.sync_directory_finance_metrics(force=force_sync)
+        except Exception:
+            pass
         cards = self.db.list_officials(search=search, chamber=chamber, party=party, state=state)
         enriched = [self._enrich_card(card) for card in cards]
         return sorted(enriched, key=lambda card: _sort_key(card, sort_by))

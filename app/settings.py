@@ -22,9 +22,10 @@ class Settings(BaseSettings):
     vercel_project_id: str | None = None
     vercel_token: str | None = None
     render_api_key: str | None = None
+    render_owner_id: str | None = None
     render_service_id: str | None = None
     render_api_url: str = "https://api.render.com/v1"
-    preferred_deploy_target: Literal["vercel", "render"] = "vercel"
+    preferred_deploy_target: Literal["vercel", "render"] = "render"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

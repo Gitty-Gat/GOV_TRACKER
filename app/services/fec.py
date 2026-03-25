@@ -29,14 +29,12 @@ class FECService:
         try:
             summary = self._build_snapshot(member)
         except requests.RequestException as exc:
-            summary = FinanceSummary(
-                available=False,
-                warning=f"Finance refresh hit the FEC API limit or returned an error: {exc}",
-                notes=[
-                    "Provide a personal data.gov key in FEC_API_KEY for higher throughput.",
-                    "The public DEMO_KEY is capped at 40 calls/hour according to FEC error responses.",
-                ],
-            )
+            if cached:
+                payload, _ = cached
+                summary = FinanceSummary.model_validate(payload)
+                summary.warning = f"Showing cached finance data because the latest refresh failed: {exc}"
+            else:
+                summary = self._partial_finance_summary(member, str(exc))
 
         self.db.save_snapshot("finance", bioguide_id, summary.model_dump(mode="json"))
         return summary
@@ -110,18 +108,34 @@ class FECService:
 
         officials = self.db.list_official_payloads()
         lookup = _build_official_lookup(officials)
-        for office in ("H", "S"):
+        office_state_pairs = sorted(
+            {
+                (
+                    "S" if (official.get("terms") or [{}])[-1].get("chamber") == "Senate" else "H",
+                    (official.get("terms") or [{}])[-1].get("stateCode") or official.get("state_code"),
+                )
+                for official in officials
+                if (official.get("terms") or [{}])[-1].get("stateCode") or official.get("state_code")
+            }
+        )
+        for office, state_code in office_state_pairs:
             page = 1
             while True:
-                payload = self._request_json(
-                    "/candidates/totals/",
-                    {
-                        "office": office,
-                        "cycle": self.settings.default_cycle,
-                        "per_page": 100,
-                        "page": page,
-                    },
-                )
+                try:
+                    payload = self._request_json(
+                        "/candidates/totals/",
+                        {
+                            "office": office,
+                            "state": state_code,
+                            "cycle": self.settings.default_cycle,
+                            "is_active_candidate": "true",
+                            "per_page": 100,
+                            "page": page,
+                        },
+                    )
+                except requests.RequestException:
+                    self.db.set_meta(meta_key, datetime.now(timezone.utc).replace(microsecond=0).isoformat())
+                    return
                 results = payload.get("results", [])
                 for item in results:
                     bioguide_id = _match_candidate_totals_row(item, lookup)
@@ -209,6 +223,30 @@ class FECService:
             return None
         payload, _ = cached
         return DirectoryMetric.model_validate(payload)
+
+    def _partial_finance_summary(self, member: dict[str, Any], error_text: str) -> FinanceSummary:
+        metric = self._load_directory_metric(member["bioguideId"])
+        donor_names = metric.top_donor_names if metric else []
+        donors = [
+            DonorRecord(name=name, amount=0.0, donor_type="Cached directory summary")
+            for name in donor_names
+        ]
+        available = bool(metric and (metric.total_raised is not None or metric.cash_on_hand is not None or donor_names))
+        notes = ["Directory-level finance cache is being shown because a live FEC refresh was unavailable."]
+        if self.settings.fec_api_key == "DEMO_KEY":
+            notes.append("Provide a personal data.gov key in FEC_API_KEY for higher throughput.")
+        return FinanceSummary(
+            available=available,
+            warning=f"Live finance refresh failed: {error_text}",
+            candidate_id=metric.candidate_id if metric else None,
+            principal_committee_id=metric.principal_committee_id if metric else None,
+            cycle=self.settings.default_cycle,
+            total_raised=metric.total_raised or 0.0 if metric else 0.0,
+            cash_on_hand=metric.cash_on_hand or 0.0 if metric else 0.0,
+            pac_share=metric.pac_share if metric else None,
+            top_donors=donors,
+            notes=notes,
+        )
 
     def _match_candidate(self, member: dict[str, Any]) -> dict[str, Any] | None:
         cache_key = member["bioguideId"]

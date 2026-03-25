@@ -79,4 +79,33 @@ Populate `data/manual_promises.json` with entries keyed by `bioguideId`:
 
 ## Deployment
 
-This repo is ready for a free-hosting handoff, but actual remote deployment still requires your account credentials. The cleanest target from here is Vercel or Render once the repo is pushed to GitHub.
+### Render
+
+Render is the primary host for this app.
+
+1. Add `RENDER_API_KEY` to `.env`.
+2. Optionally add `RENDER_OWNER_ID` if your API key can access more than one workspace.
+3. Run:
+
+```powershell
+.venv\Scripts\python scripts\deploy_render.py
+```
+
+The deployment script creates a `civic-ledger` web service if it does not exist, or triggers a new deploy if it already exists. It seeds the SQLite cache during build with:
+
+```bash
+python scripts/refresh_directory_metrics.py || true
+```
+
+The service uses `/healthz` as its health check.
+
+### Vercel
+
+Vercel is config-ready but not deployable with only `VERCEL_TEAM_ID`.
+
+You still need:
+
+- `VERCEL_PROJECT_ID`
+- `VERCEL_TOKEN`
+
+`VERCEL_TEAM_ID` only identifies the team scope. It does not authenticate deploys by itself.
