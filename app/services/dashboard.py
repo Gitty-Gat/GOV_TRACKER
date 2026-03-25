@@ -35,7 +35,7 @@ class DashboardService:
         for card in cards:
             member = self.congress.get_member_detail(card.bioguide_id, force=force_refresh)
             metric = self._load_metric(card.bioguide_id) or DirectoryMetric()
-            metric = self._ensure_efficiency_metric(card.bioguide_id, member, metric, force_refresh=force_refresh)
+            metric = self._ensure_efficiency_metric(card.bioguide_id, member, metric, force_refresh=force_refresh, full=False)
             warmed.append(self._apply_metric(card, metric))
         return warmed
 
@@ -58,7 +58,7 @@ class DashboardService:
         metric.cash_on_hand = finance.cash_on_hand or metric.cash_on_hand
         metric.pac_share = finance.pac_share if finance.pac_share is not None else metric.pac_share
         metric.top_donor_names = list(dict.fromkeys([donor.name for donor in finance.top_donors]))[:3] or metric.top_donor_names
-        metric = self._ensure_efficiency_metric(bioguide_id, member, metric, force_refresh=force_refresh)
+        metric = self._ensure_efficiency_metric(bioguide_id, member, metric, force_refresh=force_refresh, full=True)
         metric.priority_commitment_score = delivery_score.overall_score
         if metric.pac_share is not None:
             metric.pac_alignment_signal = round((metric.pac_share * 100) * ((100 - delivery_score.overall_score) / 100))
@@ -79,17 +79,22 @@ class DashboardService:
             ],
         )
 
-    def sync_directory_efficiency_metrics(self, force_refresh: bool = False, limit: int | None = None) -> None:
+    def sync_directory_efficiency_metrics(
+        self,
+        force_refresh: bool = False,
+        limit: int | None = None,
+        full: bool = False,
+    ) -> None:
         self.congress.ensure_current_members(force=force_refresh)
         payloads = self.db.list_official_payloads()
         count = 0
         for payload in payloads:
             bioguide_id = payload["bioguide_id"]
             metric = self._load_metric(bioguide_id)
-            if metric and metric.efficiency_score is not None and not force_refresh:
+            if metric and metric.efficiency_score is not None and (metric.priority_commitment_score is not None or not full) and not force_refresh:
                 continue
             member = self.congress.get_member_detail(bioguide_id, force=force_refresh)
-            self._ensure_efficiency_metric(bioguide_id, member, metric, force_refresh=force_refresh)
+            self._ensure_efficiency_metric(bioguide_id, member, metric, force_refresh=force_refresh, full=full)
             count += 1
             if limit and count >= limit:
                 break
@@ -127,9 +132,10 @@ class DashboardService:
         member: dict,
         metric: DirectoryMetric | None = None,
         force_refresh: bool = False,
+        full: bool = False,
     ) -> DirectoryMetric:
         metric = metric or self._load_metric(bioguide_id) or DirectoryMetric()
-        if metric.efficiency_score is not None and metric.priority_commitment_score is not None and not force_refresh:
+        if metric.efficiency_score is not None and (metric.priority_commitment_score is not None or not full) and not force_refresh:
             return metric
 
         sponsored = (member.get("sponsoredLegislation") or {}).get("count", 0)
@@ -142,16 +148,19 @@ class DashboardService:
         efficiency = min(100, round(min(72, throughput)))
         metric.efficiency_score = efficiency
         metric.years_in_office = years_in_office
+        if metric.priority_commitment_score is None or force_refresh:
+            metric.priority_commitment_score = max(0, min(100, round(efficiency * 0.82)))
 
-        try:
-            activity = self.congress.build_activity_snapshot(bioguide_id, force=force_refresh)
-            promises = self.promises.get_promises(member, force=force_refresh)
-            delivery = compute_delivery_score(promises, activity)
-            metric.priority_commitment_score = delivery.overall_score
-            advancement_bonus = min(18, activity.passed_count * 3 + activity.enacted_count * 8)
-            metric.efficiency_score = min(100, round(max(metric.efficiency_score or 0, efficiency + advancement_bonus)))
-        except Exception:
-            metric.priority_commitment_score = metric.priority_commitment_score if metric.priority_commitment_score is not None else max(0, efficiency - 10)
+        if full:
+            try:
+                activity = self.congress.build_activity_snapshot(bioguide_id, force=force_refresh)
+                promises = self.promises.get_promises(member, force=force_refresh)
+                delivery = compute_delivery_score(promises, activity)
+                metric.priority_commitment_score = delivery.overall_score
+                advancement_bonus = min(18, activity.passed_count * 3 + activity.enacted_count * 8)
+                metric.efficiency_score = min(100, round(max(metric.efficiency_score or 0, efficiency + advancement_bonus)))
+            except Exception:
+                pass
 
         if metric.pac_share is not None:
             commitment = metric.priority_commitment_score if metric.priority_commitment_score is not None else metric.efficiency_score or 0

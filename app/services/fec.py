@@ -144,13 +144,18 @@ class FECService:
 
         self.db.set_meta(meta_key, datetime.now(timezone.utc).replace(microsecond=0).isoformat())
 
-    def ensure_card_finance_summary(self, member: dict[str, Any], force: bool = False) -> DirectoryMetric:
+    def ensure_card_finance_summary(
+        self,
+        member: dict[str, Any],
+        force: bool = False,
+        allow_search: bool = True,
+    ) -> DirectoryMetric:
         bioguide_id = member["bioguideId"]
         metric = self._load_directory_metric(bioguide_id) or DirectoryMetric()
         if metric.top_donor_names and not force:
             return metric
 
-        if not metric.candidate_id:
+        if not metric.candidate_id and allow_search:
             candidate = self._match_candidate(member)
             if candidate:
                 metric.candidate_id = candidate.get("candidate_id")
@@ -176,7 +181,7 @@ class FECService:
                     metric.principal_committee_id = committee_id
                 except requests.RequestException:
                     committee_id = None
-            if not committee_id:
+            if not committee_id and allow_search:
                 candidate = self._match_candidate(member)
                 if candidate:
                     principal = next(
