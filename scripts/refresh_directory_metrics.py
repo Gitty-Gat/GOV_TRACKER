@@ -36,6 +36,8 @@ if __name__ == "__main__":
         try:
             member = service.congress.get_member_detail(bioguide_id)
             service.fec.build_finance_snapshot(member, force=True)
+            service.congress.build_activity_snapshot(bioguide_id, force=True)
+            service.promises.get_promises(member, force=True)
             service.get_official_detail(bioguide_id, force_refresh=False)
         except Exception:
             pass
