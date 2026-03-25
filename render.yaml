@@ -2,6 +2,9 @@ services:
   - type: web
     name: civic-ledger
     env: python
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
     buildCommand: pip install -r requirements.txt && (python scripts/refresh_directory_metrics.py || true)
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz

@@ -57,7 +57,11 @@ def list_owners(settings: Settings) -> list[dict]:
         timeout=30,
     )
     response.raise_for_status()
-    return response.json()
+    owners = []
+    for item in response.json():
+        owner = item.get("owner", item)
+        owners.append(owner)
+    return owners
 
 
 def choose_owner(settings: Settings) -> dict:
@@ -99,6 +103,7 @@ def env_vars_payload(settings: Settings) -> list[dict[str, str]]:
         {"key": "APP_NAME", "value": settings.app_name},
         {"key": "CONGRESS_API_KEY", "value": settings.congress_api_key},
         {"key": "FEC_API_KEY", "value": settings.fec_api_key},
+        {"key": "PYTHON_VERSION", "value": "3.13.0"},
         {"key": "CURRENT_CONGRESS", "value": str(settings.current_congress)},
         {"key": "DEFAULT_CYCLE", "value": str(settings.default_cycle)},
         {"key": "DATABASE_PATH", "value": settings.database_path},
