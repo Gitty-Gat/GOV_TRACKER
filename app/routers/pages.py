@@ -38,7 +38,7 @@ def home(
     total_pages = max(1, math.ceil(len(officials) / per_page))
     current_page = min(max(page, 1), total_pages)
     start = (current_page - 1) * per_page
-    page_cards = service.warm_directory_cards(officials[start : start + per_page])
+    page_cards = officials[start : start + per_page]
     states = sorted({official.state for official in all_officials})
     return templates.TemplateResponse(
         request,
@@ -58,11 +58,28 @@ def home(
 
 
 @router.get("/officials/{bioguide_id}", response_class=HTMLResponse)
-def official_detail(request: Request, bioguide_id: str, refresh: bool = False):
-    detail = service.get_official_detail(bioguide_id, force_refresh=refresh)
+def official_detail(request: Request, bioguide_id: str):
+    detail = service.get_official_detail(bioguide_id)
     finance_signal = summarize_finance_alignment(detail.finance.constituent_share, detail.finance.pac_share)
+    promise_delivery_rows = _build_promise_delivery_rows(detail)
     return templates.TemplateResponse(
         request,
         "official_detail.html",
-        {"detail": detail, "finance_signal": finance_signal},
+        {"detail": detail, "finance_signal": finance_signal, "promise_delivery_rows": promise_delivery_rows},
     )
+
+
+def _build_promise_delivery_rows(detail):
+    topic_scores = detail.delivery_score.topic_scores or []
+    rows = []
+    used_topics: set[str] = set()
+    for promise in detail.promises:
+        delivery = next((score for score in topic_scores if score.topic == promise.topic or score.promise_title == promise.title), None)
+        if delivery:
+            used_topics.add(delivery.topic)
+        rows.append({"promise": promise, "delivery": delivery})
+    for delivery in topic_scores:
+        if delivery.topic in used_topics:
+            continue
+        rows.append({"promise": None, "delivery": delivery})
+    return rows

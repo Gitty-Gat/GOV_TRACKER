@@ -34,12 +34,17 @@ def compute_delivery_score(promises: list[PromiseItem], activity: ActivitySummar
         raw_score = sum(bill.stage_weight for bill in relevant_bills[:6]) * max(0.55, promise.confidence)
         score = min(100, round(raw_score * 7))
         total += score
+        delivery_label = _delivery_label(relevant_bills)
+        delivery_summary = _delivery_stage_summary(relevant_bills)
         topic_scores.append(
             PromiseTopicScore(
                 topic=promise.topic,
                 promise_title=promise.title,
                 score=score,
                 matched_actions=relevant_bills[:4],
+                matched_action_count=len(relevant_bills),
+                delivery_label=delivery_label,
+                delivery_stage_summary=delivery_summary,
                 rationale=_build_rationale(relevant_bills, mapped_areas),
             )
         )
@@ -66,6 +71,32 @@ def compute_keeps_promises_score(promises: list[PromiseItem], activity: Activity
         if any(bill.policy_area in mapped_areas for bill in activity.recent_bills):
             matched += 1
     return round((matched / len(promises)) * 100)
+
+
+def annotate_promise_evidence(promises: list[PromiseItem]) -> list[PromiseItem]:
+    annotated: list[PromiseItem] = []
+    for promise in promises:
+        evidence_strength, evidence_label = _evidence_meta(promise)
+        annotated.append(
+            promise.model_copy(
+                update={
+                    "evidence_strength": evidence_strength,
+                    "evidence_label": evidence_label,
+                }
+            )
+        )
+    return annotated
+
+
+def compute_truth_verdict(keeps_promises_score: int, delivery_score: int) -> tuple[str, str]:
+    composite = round((keeps_promises_score * 0.6) + (delivery_score * 0.4))
+    if composite >= 72:
+        return "Aligned", "aligned"
+    if composite >= 45:
+        return "Mixed", "mixed"
+    if composite >= 20:
+        return "Dubious", "dubious"
+    return "Misleading", "misleading"
 
 
 def summarize_bill_impact(bill: BillRecord) -> str:
@@ -105,7 +136,7 @@ def summarize_bill_impact(bill: BillRecord) -> str:
 
 def summarize_finance_alignment(constituent_share: float | None, pac_share: float | None) -> str:
     if constituent_share is None or pac_share is None:
-        return "The funding mix becomes clearer after a full finance refresh."
+        return "The funding mix becomes clearer after the next scheduled data refresh."
     if constituent_share >= 0.4 and pac_share <= 0.2:
         return "This funding mix leans toward individual donors."
     if pac_share >= 0.3:
@@ -117,7 +148,7 @@ def _build_rationale(relevant_bills, mapped_areas: list[str]) -> str:
     if not relevant_bills:
         return f"No sampled bills in the recent activity window matched {', '.join(mapped_areas)}."
     best = relevant_bills[0]
-    return f"Recent activity in {', '.join(mapped_areas)} exists, led by {best.bill_number} which is currently at the {best.stage} stage."
+    return f"Visible activity exists in {', '.join(mapped_areas)}, led by {best.bill_number}."
 
 
 def _label_for_score(score: int) -> str:
@@ -135,3 +166,36 @@ def _limit_words(text: str, max_words: int) -> str:
     if len(words) <= max_words:
         return text
     return " ".join(words[:max_words]).rstrip(".,") + "."
+
+
+def _evidence_meta(promise: PromiseItem) -> tuple[float, str]:
+    if promise.provenance == "manual":
+        return 1.0, "Campaign platform"
+    confidence = promise.confidence or 0.0
+    if confidence >= 0.8:
+        return confidence, "Strong evidence"
+    if confidence >= 0.6:
+        return confidence, "Moderate evidence"
+    return confidence, "Weak evidence"
+
+
+def _delivery_label(relevant_bills: list[BillRecord]) -> str:
+    if not relevant_bills:
+        return "No visible movement"
+    best = relevant_bills[0]
+    if best.stage == "enacted":
+        return "Became law"
+    if best.stage == "passed":
+        return "Passed a chamber"
+    if best.stage == "committee":
+        return "Committee stage"
+    return "Filed but not moving"
+
+
+def _delivery_stage_summary(relevant_bills: list[BillRecord]) -> str:
+    if not relevant_bills:
+        return "No matched bills were visible in the current sample."
+    best = relevant_bills[0]
+    if best.impact_summary:
+        return best.impact_summary
+    return f"{best.bill_number} is the clearest visible match."

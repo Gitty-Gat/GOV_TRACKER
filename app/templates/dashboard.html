@@ -4,9 +4,9 @@
   <section class="hero">
     <div>
       <p class="eyebrow">Congress dashboard</p>
-      <h1>See who funds each officeholder and what they deliver.</h1>
+      <h1>Is your representative really working for you?</h1>
       <p class="lede">
-        Search the House and Senate. Open a profile. Compare donors, money, and work in office.
+        See who funds them, what they promised, and what they’ve actually done.
       </p>
     </div>
     <div class="hero-stats">
@@ -30,23 +30,23 @@
     <h2>How to read the cards</h2>
     <div class="panel-grid">
       <article class="list-card">
-        <strong>Efficiency metric</strong>
-        <p>Shows how much bill work an official moves each year.</p>
-        <p class="tiny-note">Formula: weighted bill work + advancement bonus, then divided by years in office.</p>
+        <strong>Truth verdict</strong>
+        <p>A quick verdict on whether visible work lines up with stated priorities.</p>
+        <p class="tiny-note">It blends promise coverage with delivery quality.</p>
       </article>
       <article class="list-card">
-        <strong>Keeps promises index</strong>
-        <p>Shows how many stated priorities connect to visible recent actions.</p>
-        <p class="tiny-note">Formula: matched priorities / total priorities.</p>
+        <strong>Efficiency metric</strong>
+        <p>Shows how much bill work an official moves each year.</p>
+        <p class="tiny-note">Higher means more visible output for time in office.</p>
       </article>
       <article class="list-card">
         <strong>Delivery index</strong>
-        <p>Shows how strong that follow-through is once bills are weighted by progress.</p>
-        <p class="tiny-note">Formula: average weighted score across matched priorities.</p>
+        <p>Shows how far matched bills actually moved.</p>
+        <p class="tiny-note">Higher means stronger follow-through on visible priorities.</p>
       </article>
     </div>
     <p class="tiny-note">
-      The PAC alignment sort is only a signal. It rises when PAC-backed money is higher and promise coverage is lower.
+      The PAC alignment sort is only a signal. It rises when PAC-backed money is higher and visible follow-through is lower.
     </p>
   </section>
 
@@ -118,7 +118,7 @@
               {% if official.total_raised is not none %}
                 ${{ "{:,.0f}".format(official.total_raised) }}
               {% else %}
-                Not cached
+                Not loaded
               {% endif %}
             </strong>
           </div>
@@ -155,14 +155,19 @@
         </div>
         <div class="official-card-foot">
           <span>{{ official.party or "Unknown party" }}</span>
-          <span>
-            {% if official.keeps_promises_score is not none %}
-              Keeps promises index {{ official.keeps_promises_score }}
-            {% else %}
-              Open profile
-            {% endif %}
-          </span>
+          <div class="truth-badge truth-badge-{{ official.truth_badge_variant or 'unknown' }}">
+            <span class="truth-bars">
+              <i class="{{ 'active' if (official.truth_badge_variant or '') in ['aligned', 'mixed', 'dubious', 'misleading'] else '' }}"></i>
+              <i class="{{ 'active' if (official.truth_badge_variant or '') in ['aligned', 'mixed', 'dubious'] else '' }}"></i>
+              <i class="{{ 'active' if (official.truth_badge_variant or '') in ['aligned', 'mixed'] else '' }}"></i>
+              <i class="{{ 'active' if (official.truth_badge_variant or '') in ['aligned'] else '' }}"></i>
+            </span>
+            <strong>{{ official.truth_verdict or "Unrated" }}</strong>
+          </div>
         </div>
+        {% if official.last_refreshed_at %}
+          <p class="tiny-note">Updated {{ official.last_refreshed_at.replace('T', ' ')[:16] }}</p>
+        {% endif %}
       </a>
     {% endfor %}
   </section>

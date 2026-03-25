@@ -21,9 +21,9 @@ def list_officials(
 
 
 @router.get("/officials/{bioguide_id}")
-def get_official(bioguide_id: str, refresh: bool = False):
+def get_official(bioguide_id: str):
     try:
-        detail = service.get_official_detail(bioguide_id, force_refresh=refresh)
+        detail = service.get_official_detail(bioguide_id)
     except (KeyError, IndexError) as exc:
         raise HTTPException(status_code=404, detail="Official not found") from exc
     return detail.model_dump(mode="json")

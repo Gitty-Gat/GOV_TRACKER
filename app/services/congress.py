@@ -74,6 +74,13 @@ class CongressService:
                 return fallback
             raise
 
+    def load_cached_member_detail(self, bioguide_id: str) -> dict[str, Any] | None:
+        cached = self.db.load_snapshot("member_detail", bioguide_id)
+        if cached:
+            payload, _ = cached
+            return payload
+        return self._fallback_member_detail(bioguide_id)
+
     def build_activity_snapshot(self, bioguide_id: str, force: bool = False) -> ActivitySummary:
         cached = self.db.load_snapshot("activity", bioguide_id)
         if cached and not force:
@@ -81,7 +88,9 @@ class CongressService:
             if datetime.now(timezone.utc) - fetched_at < timedelta(hours=self.settings.activity_cache_hours):
                 return ActivitySummary.model_validate(payload)
 
-        member = self.get_member_detail(bioguide_id, force=force)
+        member = self.load_cached_member_detail(bioguide_id)
+        if not member:
+            member = self.get_member_detail(bioguide_id, force=force)
         notes = [
             "Activity scores are computed from recent sponsored and cosponsored legislation sampled from Congress.gov.",
             "Sponsored bills are weighted more heavily than cosponsored bills.",

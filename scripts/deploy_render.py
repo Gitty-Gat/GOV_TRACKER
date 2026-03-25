@@ -118,6 +118,8 @@ def env_vars_payload(settings: Settings) -> list[dict[str, str]]:
         {"key": "FINANCE_CACHE_HOURS", "value": str(settings.finance_cache_hours)},
         {"key": "PROMISE_CACHE_HOURS", "value": str(settings.promise_cache_hours)},
     ]
+    if settings.database_url:
+        payload.append({"key": "DATABASE_URL", "value": settings.database_url})
     return payload
 
 

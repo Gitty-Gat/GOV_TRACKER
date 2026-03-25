@@ -1,5 +1,5 @@
 from app.models import ActivitySummary, BillRecord, PromiseItem
-from app.services.scoring import compute_delivery_score, compute_keeps_promises_score, summarize_bill_impact
+from app.services.scoring import annotate_promise_evidence, compute_delivery_score, compute_keeps_promises_score, compute_truth_verdict, summarize_bill_impact
 
 
 def test_compute_delivery_score_matches_policy_areas():
@@ -89,3 +89,21 @@ def test_bill_impact_summary_is_short():
     summary = summarize_bill_impact(bill)
     assert len(summary.split()) <= 10
     assert summary
+
+
+def test_truth_verdict_and_evidence_labels():
+    promise = PromiseItem(
+        title="Jobs & Economy",
+        description="Jobs promise",
+        topic="Jobs & Economy",
+        source_label="manual",
+        confidence=0.9,
+        provenance="manual",
+    )
+
+    annotated = annotate_promise_evidence([promise])
+    verdict, variant = compute_truth_verdict(keeps_promises_score=70, delivery_score=55)
+
+    assert annotated[0].evidence_label == "Campaign platform"
+    assert verdict == "Mixed"
+    assert variant == "mixed"

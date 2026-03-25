@@ -21,6 +21,9 @@ class OfficialCard(BaseModel):
     efficiency_score: int | None = None
     delivery_score: int | None = None
     keeps_promises_score: int | None = None
+    truth_verdict: str | None = None
+    truth_badge_variant: str | None = None
+    last_refreshed_at: str | None = None
     priority_commitment_score: int | None = None
     pac_alignment_signal: int | None = None
     pac_share: float | None = None
@@ -38,6 +41,9 @@ class DirectoryMetric(BaseModel):
     efficiency_score: int | None = None
     delivery_score: int | None = None
     keeps_promises_score: int | None = None
+    truth_verdict: str | None = None
+    truth_badge_variant: str | None = None
+    last_refreshed_at: str | None = None
     priority_commitment_score: int | None = None
     pac_alignment_signal: int | None = None
     years_in_office: int | None = None
@@ -50,6 +56,8 @@ class PromiseItem(BaseModel):
     source_label: str
     source_url: str | None = None
     confidence: float = 0.0
+    evidence_strength: float | None = None
+    evidence_label: str | None = None
     provenance: Literal["manual", "inferred"] = "inferred"
     evidence: str | None = None
 
@@ -138,8 +146,11 @@ class FinanceSummary(BaseModel):
     transfer_contributions: float = 0.0
     other_receipts: float = 0.0
     constituent_share: float | None = None
+    in_state_share_basis_amount: float = 0.0
+    in_state_share_label: str | None = None
     pac_share: float | None = None
     itemized_share: float | None = None
+    coverage_end_date: str | None = None
     donor_state_totals: list[StateContribution] = Field(default_factory=list)
     top_donors: list[DonorRecord] = Field(default_factory=list)
     top_pac_donors: list[DonorRecord] = Field(default_factory=list)
@@ -152,6 +163,9 @@ class PromiseTopicScore(BaseModel):
     promise_title: str
     score: int
     matched_actions: list[BillRecord] = Field(default_factory=list)
+    matched_action_count: int = 0
+    delivery_label: str = "No visible movement"
+    delivery_stage_summary: str = ""
     rationale: str
 
 

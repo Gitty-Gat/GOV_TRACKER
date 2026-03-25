@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 
 from app.db import Database
 from app.models import PromiseItem
+from app.services.scoring import annotate_promise_evidence
 from app.settings import get_settings
 
 
@@ -39,18 +40,18 @@ class PromiseService:
         bioguide_id = member["bioguideId"]
         cached = self.load_cached_promises(bioguide_id)
         if cached and not force:
-            return cached
+            return annotate_promise_evidence(cached)
 
         manual = self._load_manual_promises().get(bioguide_id, [])
         if manual:
-            items = [PromiseItem.model_validate({**item, "provenance": "manual"}) for item in manual]
+            items = annotate_promise_evidence([PromiseItem.model_validate({**item, "provenance": "manual"}) for item in manual])
             self.db.save_snapshot("promises", bioguide_id, {"items": [item.model_dump(mode="json") for item in items]})
             return items
 
         if not force:
             return []
 
-        inferred = self._infer_from_official_site(member.get("officialWebsiteUrl"))
+        inferred = annotate_promise_evidence(self._infer_from_official_site(member.get("officialWebsiteUrl")))
         self.db.save_snapshot("promises", bioguide_id, {"items": [item.model_dump(mode="json") for item in inferred]})
         return inferred
 
@@ -61,7 +62,7 @@ class PromiseService:
         payload, fetched_at = cached
         if datetime.now(timezone.utc) - fetched_at >= timedelta(hours=self.settings.promise_cache_hours):
             return None
-        return [PromiseItem.model_validate(item) for item in payload.get("items", [])]
+        return annotate_promise_evidence([PromiseItem.model_validate(item) for item in payload.get("items", [])])
 
     def _load_manual_promises(self) -> dict[str, list[dict[str, Any]]]:
         if not self.manual_path.exists():

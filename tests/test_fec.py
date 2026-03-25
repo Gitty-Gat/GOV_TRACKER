@@ -42,7 +42,13 @@ def test_build_snapshot_normalizes_receipts_and_pac_trails(tmp_path, monkeypatch
                 ]
             }
         if path == "/schedules/schedule_a/by_state/":
-            return {"results": [{"state": "Florida", "total": 400000}]}
+            return {
+                "results": [
+                    {"state": "Florida", "total": 250000},
+                    {"state": "FL", "total": 150000},
+                    {"state": "Georgia", "total": 80000},
+                ]
+            }
         if path == "/schedules/schedule_a/":
             committee_id = params["committee_id"]
             if committee_id == "C00816983":
@@ -119,6 +125,9 @@ def test_build_snapshot_normalizes_receipts_and_pac_trails(tmp_path, monkeypatch
     assert summary.top_pac_donors[0].name == "AARON BEAN TEAM"
     assert summary.pac_audit_trails[0].pac_committee_id == "C00840876"
     assert summary.pac_audit_trails[0].outbound_targets[0].name == "NRCC"
+    assert summary.constituent_share == 0.833
+    assert summary.in_state_share_basis_amount == 480000.0
+    assert "Florida donors" in (summary.in_state_share_label or "")
 
 
 def test_partial_finance_summary_prefers_directory_metric_over_failed_cache(tmp_path):

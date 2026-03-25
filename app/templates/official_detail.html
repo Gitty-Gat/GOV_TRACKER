@@ -3,7 +3,7 @@
 {% block content %}
   <a class="back-link" href="{{ request.url_for('home') }}">← Back to dashboard</a>
 
-  <section class="detail-hero">
+  <section class="detail-hero detail-hero-wide">
     <div class="profile-block">
       {% if detail.card.image_url %}
         <img class="profile-photo" src="{{ detail.card.image_url }}" data-fallback-src="{{ detail.card.image_fallback_url or '' }}" alt="{{ detail.card.name }}">
@@ -17,49 +17,60 @@
           {{ detail.card.chamber }} · {{ detail.card.party or "Unknown party" }} · {{ detail.card.state }}
           {% if detail.card.district %} · District {{ detail.card.district }}{% endif %}
         </p>
+        {% if detail.card.last_refreshed_at %}
+          <p class="tiny-note">Last updated {{ detail.card.last_refreshed_at.replace('T', ' ')[:16] }}</p>
+        {% endif %}
         <div class="profile-meta">
           {% if detail.card.website_url %}
             <a href="{{ detail.card.website_url }}" target="_blank" rel="noreferrer">Official website</a>
           {% endif %}
-          <a href="{{ request.url.path }}?refresh=true">Refresh data</a>
           <a href="{{ request.url_for('get_official', bioguide_id=detail.card.bioguide_id) }}" target="_blank" rel="noreferrer">JSON API</a>
         </div>
       </div>
     </div>
-    <div class="score-badge">
-      <span>Delivery index</span>
-      <strong>{{ detail.card.delivery_score or detail.delivery_score.overall_score }}</strong>
-      <small>{{ detail.delivery_score.label }}</small>
+    <div class="truth-panel">
+      <p class="eyebrow">Truth verdict</p>
+      <div class="truth-badge truth-badge-large truth-badge-{{ detail.card.truth_badge_variant or 'unknown' }}">
+        <span class="truth-bars">
+          <i class="{{ 'active' if (detail.card.truth_badge_variant or '') in ['aligned', 'mixed', 'dubious', 'misleading'] else '' }}"></i>
+          <i class="{{ 'active' if (detail.card.truth_badge_variant or '') in ['aligned', 'mixed', 'dubious'] else '' }}"></i>
+          <i class="{{ 'active' if (detail.card.truth_badge_variant or '') in ['aligned', 'mixed'] else '' }}"></i>
+          <i class="{{ 'active' if (detail.card.truth_badge_variant or '') in ['aligned'] else '' }}"></i>
+        </span>
+        <strong>{{ detail.card.truth_verdict or "Unrated" }}</strong>
+        <small>Combines promise coverage with delivery quality.</small>
+      </div>
     </div>
   </section>
 
-  <section class="metric-strip">
-    <article class="metric-card accent">
+  <section class="summary-grid">
+    <article class="summary-card accent">
       <span class="metric-label">Efficiency metric</span>
       <strong>{{ detail.card.efficiency_score or 0 }}</strong>
+      <p class="tiny-note">Time-normalized legislative output.</p>
     </article>
-    <article class="metric-card">
-      <span class="metric-label">Keeps promises</span>
-      <strong>{{ detail.card.keeps_promises_score or 0 }}</strong>
-    </article>
-    <article class="metric-card">
+    <article class="summary-card">
       <span class="metric-label">Delivery index</span>
       <strong>{{ detail.card.delivery_score or detail.delivery_score.overall_score }}</strong>
+      <p class="tiny-note">Higher means stronger follow-through on visible priorities.</p>
     </article>
-    <article class="metric-card">
+    <article class="summary-card">
       <span class="metric-label">Cash on hand</span>
       <strong>${{ "{:,.0f}".format(detail.finance.cash_on_hand) }}</strong>
+      <p class="tiny-note">As of {{ detail.finance.coverage_end_date[:10] if detail.finance.coverage_end_date else ('cycle ' ~ (detail.finance.cycle or 'current')) }}</p>
     </article>
-    <article class="metric-card">
+    <article class="summary-card">
       <span class="metric-label">Total receipts</span>
       <strong>${{ "{:,.0f}".format(detail.finance.total_raised) }}</strong>
+      <p class="tiny-note">For the {{ detail.finance.cycle or "current" }} cycle.</p>
     </article>
-    <article class="metric-card">
+    <article class="summary-card">
       <span class="metric-label">PAC share</span>
       <strong>{{ ((detail.finance.pac_share or 0) * 100)|round(1) }}%</strong>
+      <p class="tiny-note">Percent of total receipts from organized committees.</p>
     </article>
-    <article class="metric-card">
-      <span class="metric-label">In-state share</span>
+    <article class="summary-card">
+      <span class="metric-label">Home-state donor share</span>
       <strong>
         {% if detail.finance.constituent_share is not none %}
           {{ (detail.finance.constituent_share * 100)|round(1) }}%
@@ -67,37 +78,87 @@
           N/A
         {% endif %}
       </strong>
+      <p class="tiny-note">{{ detail.finance.in_state_share_label or "Based on geocoded donor-state receipts." }}</p>
     </article>
   </section>
 
-  <section class="panel-grid">
-    <article class="panel metric-explainer">
-      <p class="eyebrow">Efficiency metric</p>
-      <h2>How it works</h2>
-      <p>
-        This score tracks bill work per year in office and adds credit when bills move forward.
-      </p>
-      <p class="tiny-note">Formula: weighted bill work + advancement bonus, then divided by years in office.</p>
-    </article>
-    <article class="panel metric-explainer">
-      <p class="eyebrow">Keeps promises</p>
-      <h2>How it works</h2>
-      <p>
-        This score checks how many stated priorities connect to visible recent actions.
-      </p>
-      <p class="tiny-note">Formula: matched priorities / total priorities.</p>
-    </article>
-    <article class="panel metric-explainer">
-      <p class="eyebrow">Delivery index</p>
-      <h2>How it works</h2>
-      <p>
-        This score measures how strong the follow-through is after weighting bill progress.
-      </p>
-      <p class="tiny-note">Formula: average weighted score across matched priorities.</p>
-    </article>
+  <section class="panel">
+    <p class="eyebrow">Score guide</p>
+    <h2>What the scorecards mean</h2>
+    <div class="panel-grid formula-grid">
+      <article class="list-card">
+        <strong>Truth verdict</strong>
+        <p>A quick signal for whether visible work lines up with stated priorities.</p>
+        <p class="tiny-note">Formula: 60% promise coverage + 40% delivery quality.</p>
+      </article>
+      <article class="list-card">
+        <strong>Efficiency metric</strong>
+        <p>Shows how much bill work the office moves each year.</p>
+        <p class="tiny-note">Formula: (sponsored weight + cosponsored weight + advancement bonus) / years in office.</p>
+      </article>
+      <article class="list-card">
+        <strong>Delivery index</strong>
+        <p>Shows how far matched bills actually moved.</p>
+        <p class="tiny-note">Formula: average weighted score across matched priorities.</p>
+      </article>
+    </div>
   </section>
 
-  <section class="split-grid">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <p class="eyebrow">Promises vs delivery</p>
+        <h2>Did the promises turn into visible action?</h2>
+      </div>
+    </div>
+    <div class="comparison-board">
+      {% for row in promise_delivery_rows %}
+        <article class="comparison-row">
+          <div class="comparison-side">
+            <div class="comparison-head">
+              <strong>{{ row.promise.title if row.promise else row.delivery.promise_title }}</strong>
+              <span class="evidence-pill">{{ row.promise.evidence_label if row.promise and row.promise.evidence_label else "No source" }}</span>
+            </div>
+            {% if row.promise %}
+              <p>{{ row.promise.description }}</p>
+              <p class="tiny-note">
+                {{ row.promise.source_label }}
+                {% if row.promise.evidence %} · "{{ row.promise.evidence }}"{% endif %}
+              </p>
+            {% else %}
+              <p>No clear platform statement was stored for this topic.</p>
+            {% endif %}
+          </div>
+          <div class="comparison-side">
+            {% if row.delivery %}
+              <div class="comparison-head">
+                <strong>{{ row.delivery.delivery_label }}</strong>
+                <span class="delivery-pill">{{ row.delivery.matched_action_count }} matched bills</span>
+              </div>
+              <p>{{ row.delivery.delivery_stage_summary or row.delivery.rationale }}</p>
+              <p class="tiny-note">
+                {% if row.delivery.matched_actions %}
+                  Best visible match: {{ row.delivery.matched_actions[0].bill_number }} · {{ row.delivery.matched_actions[0].stage|replace('_', ' ')|title }}
+                {% else %}
+                  No matched bills in the current sample.
+                {% endif %}
+              </p>
+            {% else %}
+              <div class="comparison-head">
+                <strong>No visible movement</strong>
+                <span class="delivery-pill">0 matched bills</span>
+              </div>
+              <p>No matched bills were visible in the current sample.</p>
+            {% endif %}
+          </div>
+        </article>
+      {% else %}
+        <p class="callout">No promise-and-delivery comparison rows are available yet for this profile.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="finance-layout">
     <article class="panel">
       <div class="panel-head">
         <div>
@@ -146,67 +207,6 @@
     <article class="panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Promise tracking</p>
-          <h2>Delivery details</h2>
-        </div>
-      </div>
-      <p class="muted-copy">
-        Keeps promises index: {{ detail.card.keeps_promises_score or 0 }}. {{ detail.delivery_score.explanation }}
-      </p>
-      {% if detail.promises %}
-        <div class="topic-score-list">
-          {% for topic_score in detail.delivery_score.topic_scores %}
-            <div class="topic-score-row">
-              <div>
-                <strong>{{ topic_score.promise_title }}</strong>
-                <p>{{ topic_score.rationale }}</p>
-              </div>
-              <span class="score-pill">{{ topic_score.score }}</span>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="callout">No curated platform points or inferred issue priorities were available for this official yet.</p>
-      {% endif %}
-    </article>
-  </section>
-
-  <section class="split-grid">
-    <article class="panel">
-      <div class="panel-head">
-        <div>
-          <p class="eyebrow">Donor visibility</p>
-          <h2>Top visible donors</h2>
-        </div>
-      </div>
-      <div class="stack-list">
-        {% for donor in detail.finance.top_donors %}
-          <div class="list-card">
-            <div class="list-row">
-              <strong>{{ donor.name }}</strong>
-              <span>${{ "{:,.0f}".format(donor.amount) }}</span>
-            </div>
-            <p>{{ donor.donor_type }}{% if donor.city or donor.state %} · {{ donor.city or "" }}{% if donor.city and donor.state %}, {% endif %}{{ donor.state or "" }}{% endif %}</p>
-            {% if donor.employer or donor.occupation %}
-              <p class="tiny-note">{{ donor.employer or "Employer unavailable" }} · {{ donor.occupation or "Occupation unavailable" }}</p>
-            {% endif %}
-            {% if donor.other_recipients %}
-              <div class="mini-tags">
-                {% for recipient in donor.other_recipients %}
-                  <span>{{ recipient.name }} · ${{ "{:,.0f}".format(recipient.amount) }}</span>
-                {% endfor %}
-              </div>
-            {% endif %}
-          </div>
-        {% else %}
-          <p class="callout">No donor lines are cached yet for this official.</p>
-        {% endfor %}
-      </div>
-    </article>
-
-    <article class="panel">
-      <div class="panel-head">
-        <div>
           <p class="eyebrow">Geographic base</p>
           <h2>Contribution by state</h2>
         </div>
@@ -227,16 +227,51 @@
           <p class="callout">State-level contribution aggregates are not available yet for this profile.</p>
         {% endfor %}
       </div>
+      {% if detail.finance.in_state_share_label %}
+        <p class="tiny-note">{{ detail.finance.in_state_share_label }}</p>
+      {% endif %}
     </article>
   </section>
 
   <section class="panel">
     <div class="panel-head">
-        <div>
-          <p class="eyebrow">PAC trails</p>
-          <h2>Organized money flowing through PACs</h2>
-        </div>
+      <div>
+        <p class="eyebrow">Donor visibility</p>
+        <h2>Top visible donors</h2>
       </div>
+    </div>
+    <div class="donor-grid">
+      {% for donor in detail.finance.top_donors %}
+        <div class="list-card">
+          <div class="list-row">
+            <strong>{{ donor.name }}</strong>
+            <span>${{ "{:,.0f}".format(donor.amount) }}</span>
+          </div>
+          <p>{{ donor.donor_type }}{% if donor.city or donor.state %} · {{ donor.city or "" }}{% if donor.city and donor.state %}, {% endif %}{{ donor.state or "" }}{% endif %}</p>
+          {% if donor.employer or donor.occupation %}
+            <p class="tiny-note">{{ donor.employer or "Employer unavailable" }} · {{ donor.occupation or "Occupation unavailable" }}</p>
+          {% endif %}
+          {% if donor.other_recipients %}
+            <div class="mini-tags">
+              {% for recipient in donor.other_recipients %}
+                <span>{{ recipient.name }} · ${{ "{:,.0f}".format(recipient.amount) }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <p class="callout">No donor lines are cached yet for this official.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <p class="eyebrow">PAC trails</p>
+        <h2>Organized money flowing through PACs</h2>
+      </div>
+    </div>
     <div class="audit-grid">
       {% for trail in detail.finance.pac_audit_trails %}
         <article class="audit-card">
@@ -271,63 +306,40 @@
           </div>
         </article>
       {% else %}
-        <p class="callout">PAC audit trails require a successful committee-level finance refresh.</p>
+        <p class="callout">PAC audit trails are not available for this profile yet.</p>
       {% endfor %}
     </div>
   </section>
 
-  <section class="split-grid">
-    <article class="panel">
-      <div class="panel-head">
-        <div>
-          <p class="eyebrow">Stated priorities</p>
-          <h2>Platform or inferred issue agenda</h2>
-        </div>
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <p class="eyebrow">Legislative output</p>
+        <h2>Recent bills and actions</h2>
       </div>
-      <div class="stack-list">
-        {% for promise in detail.promises %}
-          <div class="list-card">
-            <div class="list-row">
-              <strong>{{ promise.title }}</strong>
-              <span>{{ (promise.confidence * 100)|round(0) }}%</span>
-            </div>
-            <p>{{ promise.description }}</p>
-            <p class="tiny-note">{{ promise.source_label }}{% if promise.evidence %} · “{{ promise.evidence }}”{% endif %}</p>
+    </div>
+    <div class="activity-summary">
+      <span>Sponsored bills: {{ detail.activity.sponsored_count_total }}</span>
+      <span>Cosponsored bills: {{ detail.activity.cosponsored_count_total }}</span>
+      <span>Advanced or enacted in sample: {{ detail.activity.passed_count + detail.activity.enacted_count }}</span>
+    </div>
+    <div class="legislation-grid">
+      {% for bill in detail.activity.recent_bills %}
+        <div class="list-card">
+          <div class="list-row">
+            <strong>{{ bill.impact_summary or bill.title }}</strong>
+            <span class="chip">{{ bill.stage|replace('_', ' ') }}</span>
           </div>
-        {% else %}
-          <p class="callout">No issue-priority dataset is available yet for this profile.</p>
-        {% endfor %}
-      </div>
-    </article>
-
-    <article class="panel">
-      <div class="panel-head">
-        <div>
-          <p class="eyebrow">Legislative output</p>
-          <h2>Recent bills and actions</h2>
+          <p>{{ bill.title }}</p>
+          <p class="tiny-note">{{ bill.bill_number }} · {{ bill.policy_area }} · {{ bill.latest_action_text }}</p>
+          {% if bill.url %}
+            <a class="text-link" href="{{ bill.url }}" target="_blank" rel="noreferrer">Open bill record</a>
+          {% endif %}
         </div>
-      </div>
-      <div class="activity-summary">
-        <span>Sponsored: {{ detail.activity.sponsored_count_total }}</span>
-        <span>Cosponsored: {{ detail.activity.cosponsored_count_total }}</span>
-        <span>Advanced or enacted in sample: {{ detail.activity.passed_count + detail.activity.enacted_count }}</span>
-      </div>
-      <div class="stack-list">
-        {% for bill in detail.activity.recent_bills %}
-          <div class="list-card">
-            <div class="list-row">
-              <strong>{{ bill.impact_summary or bill.title }}</strong>
-              <span class="chip">{{ bill.stage }}</span>
-            </div>
-            <p>{{ bill.title }}</p>
-            <p class="tiny-note">{{ bill.bill_number }} · {{ bill.policy_area }} · {{ bill.latest_action_text }}</p>
-            {% if bill.url %}
-              <a class="text-link" href="{{ bill.url }}" target="_blank" rel="noreferrer">Open bill record</a>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    </article>
+      {% else %}
+        <p class="callout">No recent legislative sample is stored for this profile yet.</p>
+      {% endfor %}
+    </div>
   </section>
 
   <details class="panel methodology">

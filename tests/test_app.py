@@ -19,6 +19,9 @@ def _detail_fixture() -> OfficialDetail:
             efficiency_score=59,
             delivery_score=34,
             keeps_promises_score=50,
+            truth_verdict="Mixed",
+            truth_badge_variant="mixed",
+            last_refreshed_at="2026-03-25T12:00:00+00:00",
             top_donor_names=["WEISS, CHARLES BRADFORD"],
             finance_available=True,
         ),
@@ -48,7 +51,11 @@ def _detail_fixture() -> OfficialDetail:
             pac_contributions=703150.0,
             transfer_contributions=62992.86,
             other_receipts=13912.46,
+            constituent_share=0.41,
+            in_state_share_basis_amount=960000.0,
+            in_state_share_label="Indiana donors: $394,000 of $960,000 geocoded receipts",
             pac_share=0.56,
+            coverage_end_date="2026-12-31",
         ),
         promises=[
             PromiseItem(
@@ -57,6 +64,7 @@ def _detail_fixture() -> OfficialDetail:
                 topic="Taxes & Budget",
                 source_label="manual",
                 confidence=0.9,
+                evidence_label="Campaign platform",
                 provenance="manual",
             )
         ],
@@ -88,6 +96,9 @@ def test_dashboard_html_shows_new_score_labels(monkeypatch):
         efficiency_score=59,
         delivery_score=34,
         keeps_promises_score=50,
+        truth_verdict="Mixed",
+        truth_badge_variant="mixed",
+        last_refreshed_at="2026-03-25T12:00:00+00:00",
         top_donor_names=["WEISS, CHARLES BRADFORD"],
         finance_available=True,
     )
@@ -98,8 +109,10 @@ def test_dashboard_html_shows_new_score_labels(monkeypatch):
     response = client.get("/")
 
     assert response.status_code == 200
+    assert "Is your representative really working for you?" in response.text
     assert "Delivery index" in response.text
-    assert "Keeps promises index 50" in response.text
+    assert "Mixed" in response.text
+    assert "Keeps promises index 50" not in response.text
 
 
 def test_official_detail_html_renders_explainers_and_impact_summary(monkeypatch):
@@ -109,10 +122,13 @@ def test_official_detail_html_renders_explainers_and_impact_summary(monkeypatch)
     response = client.get("/officials/B001299")
 
     assert response.status_code == 200
+    assert "Truth verdict" in response.text
     assert "Efficiency metric" in response.text
-    assert "Keeps promises" in response.text
     assert "Delivery index" in response.text
+    assert "Formula: 60% promise coverage + 40% delivery quality." in response.text
+    assert "Campaign platform" in response.text
     assert "Changes taxes for local families and employers." in response.text
+    assert "$1,088,676" in response.text
 
 
 def test_api_official_detail_returns_mocked_payload(monkeypatch):
@@ -125,3 +141,4 @@ def test_api_official_detail_returns_mocked_payload(monkeypatch):
     payload = response.json()
     assert payload["card"]["delivery_score"] == 34
     assert payload["card"]["keeps_promises_score"] == 50
+    assert payload["card"]["truth_verdict"] == "Mixed"

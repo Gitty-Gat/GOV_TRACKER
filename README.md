@@ -5,12 +5,12 @@ Civic Ledger is a House and Senate dashboard focused on two questions:
 1. Who funds a federal elected official?
 2. What has that official tangibly done in office relative to their stated priorities?
 
-This MVP ships as a FastAPI application with a designed frontend, on-demand public-data aggregation, and a transparent scoring layer instead of a black-box ranking.
+This MVP ships as a FastAPI application with a designed frontend, precomputed public-data snapshots, and a transparent scoring layer instead of a black-box ranking.
 
 ## Product shape
 
 - Filterable House/Senate landing dashboard with member photos and search.
-- Official detail view with war-chest metrics, major donors, PAC audit trails, state contribution mix, legislative activity, and a promise-to-action delivery index.
+- Official detail view with war-chest metrics, major donors, PAC audit trails, state contribution mix, legislative activity, a truth verdict badge, and a promise-vs-delivery board.
 - JSON API endpoints for reuse by a richer frontend later.
 
 ## Data strategy
@@ -23,26 +23,28 @@ This MVP ships as a FastAPI application with a designed frontend, on-demand publ
 - Stated priorities:
   - Preferred: curated manual promises in `data/manual_promises.json`.
   - Fallback: inferred issue priorities from official member website language.
+- Read path:
+  - Rendered pages and API routes read only from precomputed snapshots in the app database.
+  - Upstream Congress/FEC sync is handled by batch refresh scripts, not by user requests.
 
-### Caching and rate limiting
+### Precomputed storage and rate limiting
 
-- Current-member sync happens once per day by default and is stored in SQLite.
-- If the Congress demo key rate-limits, the app falls back to a public current-member dataset so the main directory still works.
-- Detail, activity, finance, and promise snapshots are cached independently with separate TTLs.
-- The app is designed to work with `DEMO_KEY`, but finance endpoints degrade quickly under the FEC demo limit.
-- For real usage, set personal `CONGRESS_API_KEY` and `FEC_API_KEY` values in `.env`.
+- Production is designed to use `DATABASE_URL` for hosted Postgres.
+- Local development falls back to `DATABASE_PATH` SQLite.
+- If the Congress API rate-limits, the app falls back to a public current-member dataset so the directory still works.
+- The app is designed to work with `DEMO_KEY`, but meaningful finance depth requires real `CONGRESS_API_KEY` and `FEC_API_KEY` values.
 
 ### Truthfulness constraints
 
 - The dashboard shows funding patterns and policy activity side by side.
 - It does not claim causation between donations and outcomes.
-- The promise score is explainable and evidence-backed, with methodology exposed in the UI.
+- The truth verdict is explainable and evidence-backed, with methodology exposed in the UI.
 
 ## Stack
 
 - Backend: FastAPI
 - Frontend: Jinja templates, custom CSS, vanilla JS
-- Storage and cache: SQLite
+- Storage and cache: Postgres via `DATABASE_URL` in production, SQLite fallback in local dev
 - Tests: pytest
 
 ## Local run
@@ -85,19 +87,30 @@ Render is the primary host for this app.
 
 1. Add `RENDER_API_KEY` to `.env`.
 2. Optionally add `RENDER_OWNER_ID` if your API key can access more than one workspace.
-3. Run:
+3. Add `DATABASE_URL` if you want persistent production data instead of SQLite fallback.
+4. Run:
 
 ```powershell
 .venv\Scripts\python scripts\deploy_render.py
 ```
 
-The deployment script creates a `civic-ledger` web service if it does not exist, or triggers a new deploy if it already exists. It seeds the SQLite cache during build with:
+The deployment script creates a `civic-ledger` web service if it does not exist, or triggers a new deploy if it already exists. During build it keeps the fallback SQLite path warm with:
 
 ```bash
 python scripts/refresh_directory_metrics.py || true
 ```
 
 The service uses `/healthz` as its health check.
+
+### Scheduled refresh
+
+Use `.github/workflows/refresh-data.yml` to refresh the full dataset on a schedule or by manual dispatch. This is the intended full precompute path for production, especially when `DATABASE_URL` is set.
+
+Recommended GitHub secrets:
+
+- `CONGRESS_API_KEY`
+- `FEC_API_KEY`
+- `DATABASE_URL`
 
 ### Vercel
 

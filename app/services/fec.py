@@ -78,10 +78,12 @@ class FECService:
         other_receipts = round(max(0.0, total_raised - (individual_contributions + pac_contributions + transfer_contributions)), 2)
 
         constituent_share = None
-        if donor_states and total_raised:
+        geocoded_receipts_total = round(sum(item.amount for item in donor_states), 2)
+        home_total = 0.0
+        if donor_states and geocoded_receipts_total:
             home_state = (member.get("terms") or [{}])[-1].get("stateCode") or member.get("state")
-            home_total = sum(item.amount for item in donor_states if item.state == home_state)
-            constituent_share = round(home_total / total_raised, 3)
+            home_total = round(sum(item.amount for item in donor_states if item.state == home_state), 2)
+            constituent_share = round(home_total / geocoded_receipts_total, 3)
         pac_share = round(pac_contributions / total_raised, 3) if total_raised else None
         itemized_share = round(float(totals.get("individual_itemized_contributions") or 0) / individual_contributions, 3) if individual_contributions else None
 
@@ -108,8 +110,15 @@ class FECService:
             transfer_contributions=transfer_contributions,
             other_receipts=other_receipts,
             constituent_share=constituent_share,
+            in_state_share_basis_amount=geocoded_receipts_total,
+            in_state_share_label=(
+                f"{member.get('state')} donors: ${home_total:,.0f} of ${geocoded_receipts_total:,.0f} geocoded receipts"
+                if constituent_share is not None
+                else None
+            ),
             pac_share=pac_share,
             itemized_share=itemized_share,
+            coverage_end_date=totals.get("coverage_end_date"),
             donor_state_totals=donor_states,
             top_donors=top_donors,
             top_pac_donors=top_pac_donors,
@@ -326,13 +335,15 @@ class FECService:
             )
         except requests.RequestException:
             return []
-        states: list[StateContribution] = []
+        grouped: dict[str, float] = defaultdict(float)
         for item in payload.get("results", []):
-            state = item.get("state") or item.get("contributor_state")
+            state = _normalize_state_token(item.get("state") or item.get("contributor_state"))
             amount = item.get("total") or item.get("total_amount") or item.get("contribution_receipt_amount")
             if state and amount:
-                states.append(StateContribution(state=state, amount=float(amount)))
-        return states
+                grouped[state] += float(amount)
+        states = [StateContribution(state=state, amount=round(amount, 2)) for state, amount in grouped.items()]
+        states.sort(key=lambda item: item.amount, reverse=True)
+        return states[:8]
 
     def _safe_top_donors(self, committee_id: str | None, individual_only: bool = False) -> list[DonorRecord]:
         if not committee_id:
@@ -601,3 +612,68 @@ def _candidate_name_parts(name: str) -> tuple[str, str]:
 
 def _normalize_name_token(value: str) -> str:
     return re.sub(r"[^a-z]", "", value.lower())
+
+
+def _normalize_state_token(value: str | None) -> str | None:
+    if not value:
+        return None
+    raw = str(value).strip()
+    if len(raw) == 2 and raw.isalpha():
+        return raw.upper()
+    normalized = STATE_CODE_LOOKUP.get(raw.lower())
+    return normalized or raw.upper()
+
+
+STATE_CODE_LOOKUP = {
+    "alabama": "AL",
+    "alaska": "AK",
+    "arizona": "AZ",
+    "arkansas": "AR",
+    "california": "CA",
+    "colorado": "CO",
+    "connecticut": "CT",
+    "delaware": "DE",
+    "district of columbia": "DC",
+    "florida": "FL",
+    "georgia": "GA",
+    "hawaii": "HI",
+    "idaho": "ID",
+    "illinois": "IL",
+    "indiana": "IN",
+    "iowa": "IA",
+    "kansas": "KS",
+    "kentucky": "KY",
+    "louisiana": "LA",
+    "maine": "ME",
+    "maryland": "MD",
+    "massachusetts": "MA",
+    "michigan": "MI",
+    "minnesota": "MN",
+    "mississippi": "MS",
+    "missouri": "MO",
+    "montana": "MT",
+    "nebraska": "NE",
+    "nevada": "NV",
+    "new hampshire": "NH",
+    "new jersey": "NJ",
+    "new mexico": "NM",
+    "new york": "NY",
+    "north carolina": "NC",
+    "north dakota": "ND",
+    "ohio": "OH",
+    "oklahoma": "OK",
+    "oregon": "OR",
+    "pennsylvania": "PA",
+    "rhode island": "RI",
+    "south carolina": "SC",
+    "south dakota": "SD",
+    "tennessee": "TN",
+    "texas": "TX",
+    "utah": "UT",
+    "vermont": "VT",
+    "virginia": "VA",
+    "washington": "WA",
+    "west virginia": "WV",
+    "wisconsin": "WI",
+    "wyoming": "WY",
+}

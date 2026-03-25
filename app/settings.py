@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     fec_api_key: str = "DEMO_KEY"
     current_congress: int = 119
     default_cycle: int = 2026
+    database_url: str | None = None
     database_path: str = "data/civic_ledger.db"
     request_timeout_seconds: int = 30
     officials_sync_hours: int = 24
