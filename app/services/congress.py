@@ -9,6 +9,7 @@ import yaml
 
 from app.db import Database
 from app.models import ActivitySummary, BillRecord, PolicyAreaStat
+from app.services.scoring import summarize_bill_impact
 from app.settings import get_settings
 
 
@@ -134,6 +135,25 @@ class CongressService:
         self.db.save_snapshot("activity", bioguide_id, summary.model_dump(mode="json"))
         return summary
 
+    def load_cached_activity_snapshot(self, bioguide_id: str) -> ActivitySummary | None:
+        cached = self.db.load_snapshot("activity", bioguide_id)
+        if not cached:
+            return None
+        payload, _ = cached
+        return ActivitySummary.model_validate(payload)
+
+    def build_lightweight_activity_snapshot(self, member: dict[str, Any], note: str | None = None) -> ActivitySummary:
+        notes = [
+            "This quick view uses cached counts while detailed bill activity is still loading.",
+        ]
+        if note:
+            notes.append(note)
+        return ActivitySummary(
+            sponsored_count_total=(member.get("sponsoredLegislation") or {}).get("count", 0),
+            cosponsored_count_total=(member.get("cosponsoredLegislation") or {}).get("count", 0),
+            notes=notes,
+        )
+
     def _fetch_legislation(
         self,
         bioguide_id: str,
@@ -154,22 +174,44 @@ class CongressService:
             if not items:
                 break
             for item in items:
-                stage, weight = _derive_stage(item.get("latestAction", {}).get("text", ""), sponsorship)
+                latest_action = item.get("latestAction") or {}
+                if not isinstance(latest_action, dict):
+                    latest_action = {}
+                policy_area = item.get("policyArea") or {}
+                if not isinstance(policy_area, dict):
+                    policy_area = {}
+                stage, weight = _derive_stage(latest_action.get("text", ""), sponsorship)
                 number = item.get("number")
                 bill_type = item.get("type") or item.get("amendmentType") or ""
+                title = item.get("title") or "Untitled legislation"
                 records.append(
                     BillRecord(
-                        title=item.get("title", "Untitled legislation"),
+                        title=title,
                         bill_number=f"{bill_type} {number}".strip().upper(),
                         congress=int(item.get("congress", self.settings.current_congress)),
                         introduced_date=item.get("introducedDate"),
-                        policy_area=((item.get("policyArea") or {}).get("name") or "Unspecified"),
-                        latest_action_text=item.get("latestAction", {}).get("text", ""),
-                        latest_action_date=item.get("latestAction", {}).get("actionDate"),
+                        policy_area=(policy_area.get("name") or "Unspecified"),
+                        latest_action_text=latest_action.get("text", ""),
+                        latest_action_date=latest_action.get("actionDate"),
                         url=item.get("url"),
                         sponsorship=sponsorship,  # type: ignore[arg-type]
                         stage=stage,
                         stage_weight=weight,
+                        impact_summary=summarize_bill_impact(
+                            BillRecord(
+                                title=title,
+                                bill_number=f"{bill_type} {number}".strip().upper(),
+                                congress=int(item.get("congress", self.settings.current_congress)),
+                                introduced_date=item.get("introducedDate"),
+                                policy_area=(policy_area.get("name") or "Unspecified"),
+                                latest_action_text=latest_action.get("text", ""),
+                                latest_action_date=latest_action.get("actionDate"),
+                                url=item.get("url"),
+                                sponsorship=sponsorship,  # type: ignore[arg-type]
+                                stage=stage,
+                                stage_weight=weight,
+                            )
+                        ),
                     )
                 )
                 if len(records) >= max_items:

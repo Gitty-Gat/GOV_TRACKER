@@ -13,18 +13,23 @@
   <body>
     <div class="page-shell">
       <aside class="sidebar">
-        <a class="brand" href="{{ request.url_for('home') }}">
-          <span class="brand-mark">CL</span>
-          <span>
-            <strong>Civic Ledger</strong>
-            <small>House + Senate influence dashboard</small>
-          </span>
-        </a>
+        <div class="sidebar-top">
+          <a class="brand" href="{{ request.url_for('home') }}">
+            <span class="brand-mark">CL</span>
+            <span class="brand-copy">
+              <strong>Civic Ledger</strong>
+              <small>House + Senate dashboard</small>
+            </span>
+          </a>
+          <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-expanded="true" aria-label="Toggle sidebar">
+            <span>Hide</span>
+          </button>
+        </div>
         <div class="sidebar-panel">
           <p class="eyebrow">Method</p>
-          <h2>Trace the money. Compare the work.</h2>
+          <h2>Follow the money. Check the work.</h2>
           <p>
-            Campaign finance, PAC trails, recent legislative actions, and a transparent promise-delivery score.
+            See funding, donors, recent bill work, and plain-language scorecards.
           </p>
         </div>
         <div class="sidebar-panel muted">

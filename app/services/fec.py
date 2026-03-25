@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import re
 from typing import Any
@@ -20,18 +21,28 @@ class FECService:
 
     def build_finance_snapshot(self, member: dict[str, Any], force: bool = False) -> FinanceSummary:
         bioguide_id = member["bioguideId"]
-        cached = self.db.load_snapshot("finance", bioguide_id)
-        if cached and not force:
-            payload, fetched_at = cached
-            if datetime.now(timezone.utc) - fetched_at < timedelta(hours=self.settings.finance_cache_hours):
-                return FinanceSummary.model_validate(payload)
+        cached = self.load_cached_finance_snapshot(bioguide_id)
+        metric = self._load_directory_metric(bioguide_id)
+        if not force:
+            if cached and cached.available and self._has_consistent_receipt_buckets(cached):
+                return cached
+            if metric:
+                summary = self._partial_finance_summary(member, cached.warning if cached else None)
+                if cached and cached.top_donors and not summary.top_donors:
+                    summary.top_donors = cached.top_donors
+                if cached and cached.top_pac_donors and not summary.top_pac_donors:
+                    summary.top_pac_donors = cached.top_pac_donors
+                if cached and cached.pac_audit_trails and not summary.pac_audit_trails:
+                    summary.pac_audit_trails = cached.pac_audit_trails
+                return summary
+            if cached:
+                return cached
 
         try:
             summary = self._build_snapshot(member)
         except requests.RequestException as exc:
-            if cached:
-                payload, _ = cached
-                summary = FinanceSummary.model_validate(payload)
+            if cached and (cached.available or cached.total_raised or cached.top_donors):
+                summary = cached.model_copy(deep=True)
                 summary.warning = f"Showing cached finance data because the latest refresh failed: {exc}"
             else:
                 summary = self._partial_finance_summary(member, str(exc))
@@ -57,14 +68,18 @@ class FECService:
         top_pac_donors = self._safe_top_pac_donors(committee_id)
         pac_trails = self._safe_pac_audit_trails(top_pac_donors)
 
-        total_raised = float(totals.get("contributions") or 0)
-        pac_contributions = float(totals.get("pac_contributions") or 0)
+        total_raised = float(totals.get("receipts") or totals.get("contributions") or 0)
+        organized_committee_contributions = float(totals.get("other_political_committee_contributions") or 0) + float(
+            totals.get("political_party_committee_contributions") or 0
+        )
+        pac_contributions = organized_committee_contributions
         individual_contributions = float(totals.get("individual_contributions") or 0)
         transfer_contributions = float(totals.get("transfers_from_other_authorized_committee") or 0)
+        other_receipts = round(max(0.0, total_raised - (individual_contributions + pac_contributions + transfer_contributions)), 2)
 
         constituent_share = None
         if donor_states and total_raised:
-            home_state = member.get("state")
+            home_state = (member.get("terms") or [{}])[-1].get("stateCode") or member.get("state")
             home_total = sum(item.amount for item in donor_states if item.state == home_state)
             constituent_share = round(home_total / total_raised, 3)
         pac_share = round(pac_contributions / total_raised, 3) if total_raised else None
@@ -75,6 +90,8 @@ class FECService:
             notes.append("FEC data is running on DEMO_KEY; richer PAC tracing needs a personal API key for routine use.")
         if donor_states:
             notes.append("Constituent share is estimated using in-state donations as a proxy for district/state constituency.")
+        if other_receipts:
+            notes.append("Other receipts and adjustments capture the portion of reported receipts outside individuals, organized committees, and transfers.")
 
         return FinanceSummary(
             available=True,
@@ -87,7 +104,9 @@ class FECService:
             disbursements=float(totals.get("disbursements") or 0),
             individual_contributions=individual_contributions,
             pac_contributions=pac_contributions,
+            organized_committee_contributions=organized_committee_contributions,
             transfer_contributions=transfer_contributions,
+            other_receipts=other_receipts,
             constituent_share=constituent_share,
             pac_share=pac_share,
             itemized_share=itemized_share,
@@ -144,7 +163,9 @@ class FECService:
                     existing = self._load_directory_metric(bioguide_id)
                     metric = existing or DirectoryMetric()
                     total_raised = float(item.get("receipts") or item.get("contributions") or 0)
-                    pac_component = float(item.get("other_political_committee_contributions") or 0)
+                    pac_component = float(item.get("other_political_committee_contributions") or 0) + float(
+                        item.get("political_party_committee_contributions") or 0
+                    )
                     metric.finance_available = True
                     metric.candidate_id = item.get("candidate_id")
                     metric.total_raised = total_raised
@@ -217,6 +238,13 @@ class FECService:
         self.db.save_snapshot("directory_metric", bioguide_id, metric.model_dump(mode="json"))
         return metric
 
+    def load_cached_finance_snapshot(self, bioguide_id: str) -> FinanceSummary | None:
+        cached = self.db.load_snapshot("finance", bioguide_id)
+        if not cached:
+            return None
+        payload, _ = cached
+        return FinanceSummary.model_validate(payload)
+
     def _load_directory_metric(self, bioguide_id: str) -> DirectoryMetric | None:
         cached = self.db.load_snapshot("directory_metric", bioguide_id)
         if not cached:
@@ -237,12 +265,13 @@ class FECService:
             notes.append("Provide a personal data.gov key in FEC_API_KEY for higher throughput.")
         return FinanceSummary(
             available=available,
-            warning=f"Live finance refresh failed: {error_text}",
+            warning=f"Live finance refresh failed: {error_text}" if error_text else "Showing cached directory finance while detailed finance loads.",
             candidate_id=metric.candidate_id if metric else None,
             principal_committee_id=metric.principal_committee_id if metric else None,
             cycle=self.settings.default_cycle,
             total_raised=metric.total_raised or 0.0 if metric else 0.0,
             cash_on_hand=metric.cash_on_hand or 0.0 if metric else 0.0,
+            other_receipts=metric.total_raised or 0.0 if metric else 0.0,
             pac_share=metric.pac_share if metric else None,
             top_donors=donors,
             notes=notes,
@@ -333,41 +362,40 @@ class FECService:
                     occupation=item.get("contributor_occupation"),
                     contributor_id=(item.get("contributor") or {}).get("contributor_id") or item.get("contributor_id"),
                     source_url=item.get("pdf_url"),
-                    other_recipients=self._safe_other_recipients(item.get("contributor_name")),
                 )
             )
+        for donor in donors[:3]:
+            donor.other_recipients = self._safe_other_recipients(donor.name)
         return donors
 
     def _safe_top_pac_donors(self, committee_id: str | None) -> list[DonorRecord]:
         if not committee_id:
             return []
-        try:
-            payload = self._request_json(
-                "/schedules/schedule_a/by_contributor/",
-                {
-                    "committee_id": committee_id,
-                    "two_year_transaction_period": self.settings.default_cycle,
-                    "sort": "-total",
-                    "per_page": 8,
-                },
-            )
-        except requests.RequestException:
-            return []
-        donors: list[DonorRecord] = []
-        for item in payload.get("results", []):
-            amount = item.get("total") or item.get("total_amount") or item.get("contribution_receipt_amount") or 0
+        grouped: dict[tuple[str, str], dict[str, Any]] = defaultdict(lambda: {"amount": 0.0, "donor_type": "Committee/PAC"})
+        for item in self._safe_committee_receipts(committee_id, max_pages=2):
+            if item.get("is_individual"):
+                continue
             contributor = item.get("contributor") or {}
-            donor_name = item.get("contributor_name") or contributor.get("name") or item.get("name")
-            if donor_name:
-                donors.append(
-                    DonorRecord(
-                        name=donor_name,
-                        amount=float(amount),
-                        donor_type=contributor.get("committee_type_full") or "Committee/PAC",
-                        contributor_id=contributor.get("committee_id") or item.get("contributor_id"),
-                    )
-                )
-        return donors
+            contributor_id = contributor.get("committee_id") or item.get("contributor_id")
+            donor_name = contributor.get("name") or item.get("contributor_name") or item.get("donor_committee_name")
+            if not donor_name:
+                continue
+            key = (contributor_id or donor_name, donor_name)
+            grouped[key]["amount"] += float(item.get("contribution_receipt_amount") or 0)
+            grouped[key]["donor_type"] = contributor.get("committee_type_full") or item.get("entity_type_desc") or "Committee/PAC"
+            grouped[key]["contributor_id"] = contributor_id
+        donors = [
+            DonorRecord(
+                name=name,
+                amount=round(values["amount"], 2),
+                donor_type=values["donor_type"],
+                contributor_id=values.get("contributor_id"),
+            )
+            for (_, name), values in grouped.items()
+            if values["amount"] > 0
+        ]
+        donors.sort(key=lambda donor: donor.amount, reverse=True)
+        return donors[:8]
 
     def _safe_pac_audit_trails(self, donors: list[DonorRecord]) -> list[PacAuditTrail]:
         trails: list[PacAuditTrail] = []
@@ -441,12 +469,50 @@ class FECService:
             )
         return recipients
 
+    def _safe_committee_receipts(self, committee_id: str, max_pages: int = 1) -> list[dict[str, Any]]:
+        receipts: list[dict[str, Any]] = []
+        for page in range(1, max_pages + 1):
+            try:
+                payload = self._request_json(
+                    "/schedules/schedule_a/",
+                    {
+                        "committee_id": committee_id,
+                        "two_year_transaction_period": self.settings.default_cycle,
+                        "sort": "-contribution_receipt_amount",
+                        "per_page": 100,
+                        "page": page,
+                    },
+                )
+            except requests.RequestException:
+                break
+            results = payload.get("results", [])
+            if not results:
+                break
+            receipts.extend(results)
+            if len(results) < 100:
+                break
+        return receipts
+
     def _request_json(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         request_params = dict(params)
         request_params["api_key"] = self.settings.fec_api_key
-        response = requests.get(f"{self.BASE_URL}{path}", params=request_params, timeout=self.settings.request_timeout_seconds)
+        response = requests.get(
+            f"{self.BASE_URL}{path}",
+            params=request_params,
+            timeout=min(self.settings.request_timeout_seconds, 12),
+        )
         response.raise_for_status()
         return response.json()
+
+    def _has_consistent_receipt_buckets(self, summary: FinanceSummary) -> bool:
+        bucket_total = round(
+            summary.individual_contributions
+            + summary.organized_committee_contributions
+            + summary.transfer_contributions
+            + summary.other_receipts,
+            2,
+        )
+        return round(summary.total_raised, 2) == bucket_total
 
 
 def _pick_best_candidate(member: dict[str, Any], results: list[dict[str, Any]]) -> dict[str, Any] | None:

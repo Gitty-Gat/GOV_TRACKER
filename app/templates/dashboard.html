@@ -4,9 +4,9 @@
   <section class="hero">
     <div>
       <p class="eyebrow">Congress dashboard</p>
-      <h1>See who funds Congress and what each officeholder gets done.</h1>
+      <h1>See who funds each officeholder and what they deliver.</h1>
       <p class="lede">
-        Search the House and Senate. Open any profile. Compare money, donors, and work in office.
+        Search the House and Senate. Open a profile. Compare donors, money, and work in office.
       </p>
     </div>
     <div class="hero-stats">
@@ -25,15 +25,28 @@
     </div>
   </section>
 
-  <section class="panel metric-explainer">
-    <p class="eyebrow">Efficiency metric</p>
-    <h2>What the score means</h2>
-    <p>
-      This score looks at how much work an official moves each year in office.
-      It gives more credit when bills move forward and when recent work matches stated priorities.
-    </p>
+  <section class="panel">
+    <p class="eyebrow">Score guide</p>
+    <h2>How to read the cards</h2>
+    <div class="panel-grid">
+      <article class="list-card">
+        <strong>Efficiency metric</strong>
+        <p>Shows how much bill work an official moves each year.</p>
+        <p class="tiny-note">Formula: weighted bill work + advancement bonus, then divided by years in office.</p>
+      </article>
+      <article class="list-card">
+        <strong>Keeps promises index</strong>
+        <p>Shows how many stated priorities connect to visible recent actions.</p>
+        <p class="tiny-note">Formula: matched priorities / total priorities.</p>
+      </article>
+      <article class="list-card">
+        <strong>Delivery index</strong>
+        <p>Shows how strong that follow-through is once bills are weighted by progress.</p>
+        <p class="tiny-note">Formula: average weighted score across matched priorities.</p>
+      </article>
+    </div>
     <p class="tiny-note">
-      The donor alignment sort is a signal, not proof. It rises when PAC support is higher and visible follow-through is lower.
+      The PAC alignment sort is only a signal. It rises when PAC-backed money is higher and promise coverage is lower.
     </p>
   </section>
 
@@ -120,6 +133,16 @@
             </strong>
           </div>
           <div class="metric-line">
+            <span>Delivery index</span>
+            <strong>
+              {% if official.delivery_score is not none %}
+                {{ official.delivery_score }}
+              {% else %}
+                Pending
+              {% endif %}
+            </strong>
+          </div>
+          <div class="metric-line">
             <span>Top donors</span>
             <strong class="donor-line">
               {% if official.top_donor_names %}
@@ -133,8 +156,8 @@
         <div class="official-card-foot">
           <span>{{ official.party or "Unknown party" }}</span>
           <span>
-            {% if official.priority_commitment_score is not none %}
-              Keeps promises {{ official.priority_commitment_score }}
+            {% if official.keeps_promises_score is not none %}
+              Keeps promises index {{ official.keeps_promises_score }}
             {% else %}
               Open profile
             {% endif %}

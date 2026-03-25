@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.services.dashboard import DashboardService
+from app.services.dashboard import DashboardService, _sort_key
 from app.services.scoring import summarize_finance_alignment
 
 router = APIRouter(tags=["pages"])
@@ -25,7 +25,15 @@ def home(
     page: int = Query(default=1),
 ):
     all_officials = service.list_officials()
-    officials = service.list_officials(search=search, chamber=chamber, party=party, state=state, sort_by=sort)
+    officials = [
+        official
+        for official in all_officials
+        if (not search or search.lower() in official.name.lower() or search.lower() in official.state.lower())
+        and (not chamber or official.chamber == chamber)
+        and (not party or official.party == party)
+        and (not state or official.state == state)
+    ]
+    officials = sorted(officials, key=lambda official: _sort_key(official, sort))
     per_page = 24
     total_pages = max(1, math.ceil(len(officials) / per_page))
     current_page = min(max(page, 1), total_pages)

@@ -19,6 +19,8 @@ class OfficialCard(BaseModel):
     cash_on_hand: float | None = None
     top_donor_names: list[str] = Field(default_factory=list)
     efficiency_score: int | None = None
+    delivery_score: int | None = None
+    keeps_promises_score: int | None = None
     priority_commitment_score: int | None = None
     pac_alignment_signal: int | None = None
     pac_share: float | None = None
@@ -34,6 +36,8 @@ class DirectoryMetric(BaseModel):
     pac_share: float | None = None
     top_donor_names: list[str] = Field(default_factory=list)
     efficiency_score: int | None = None
+    delivery_score: int | None = None
+    keeps_promises_score: int | None = None
     priority_commitment_score: int | None = None
     pac_alignment_signal: int | None = None
     years_in_office: int | None = None
@@ -62,6 +66,7 @@ class BillRecord(BaseModel):
     sponsorship: Literal["sponsored", "cosponsored"] = "sponsored"
     stage: str = "introduced"
     stage_weight: float = 0.0
+    impact_summary: str = ""
 
 
 class PolicyAreaStat(BaseModel):
@@ -129,7 +134,9 @@ class FinanceSummary(BaseModel):
     disbursements: float = 0.0
     individual_contributions: float = 0.0
     pac_contributions: float = 0.0
+    organized_committee_contributions: float = 0.0
     transfer_contributions: float = 0.0
+    other_receipts: float = 0.0
     constituent_share: float | None = None
     pac_share: float | None = None
     itemized_share: float | None = None

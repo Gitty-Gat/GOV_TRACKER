@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.models import ActivitySummary, DeliveryScore, PromiseItem, PromiseTopicScore
+from app.models import ActivitySummary, BillRecord, DeliveryScore, PromiseItem, PromiseTopicScore
 
 
 PROMISE_POLICY_MAP: dict[str, list[str]] = {
@@ -49,21 +49,68 @@ def compute_delivery_score(promises: list[PromiseItem], activity: ActivitySummar
         overall_score=overall,
         label=_label_for_score(overall),
         explanation=(
-            "This index compares stated priorities with recent sponsored and cosponsored legislation, "
-            "giving more weight to sponsored bills and bills that advanced beyond committee."
+            "This index averages weighted follow-through across stated priorities, with more credit for sponsored bills and bills that advanced."
         ),
         topic_scores=topic_scores,
     )
 
 
+def compute_keeps_promises_score(promises: list[PromiseItem], activity: ActivitySummary) -> int:
+    if not promises:
+        return 0
+    if not activity.recent_bills:
+        return 0
+    matched = 0
+    for promise in promises:
+        mapped_areas = PROMISE_POLICY_MAP.get(promise.topic, [promise.topic])
+        if any(bill.policy_area in mapped_areas for bill in activity.recent_bills):
+            matched += 1
+    return round((matched / len(promises)) * 100)
+
+
+def summarize_bill_impact(bill: BillRecord) -> str:
+    title = (bill.title or "").lower()
+    policy_area = (bill.policy_area or "").lower()
+    stage = bill.stage
+
+    candidates = [
+        ("tax", "Changes taxes for local families and employers."),
+        ("health", "Affects health coverage or care access locally."),
+        ("veteran", "Targets benefits or services for veterans."),
+        ("school", "Changes schools or education access locally."),
+        ("education", "Changes schools or education access locally."),
+        ("bridge", "Supports transportation and public works funding."),
+        ("road", "Supports transportation and public works funding."),
+        ("infrastructure", "Supports transportation and public works funding."),
+        ("energy", "Changes energy costs or supply reliability."),
+        ("housing", "Touches housing costs or local development."),
+        ("crime", "Affects policing or public safety policy."),
+        ("immigration", "Changes border or immigration enforcement policy."),
+        ("small business", "Could affect small-business costs or growth."),
+        ("agriculture", "Affects farming, food, or rural producers."),
+    ]
+    haystack = f"{title} {policy_area}"
+    for needle, summary in candidates:
+        if needle in haystack:
+            return _limit_words(summary, 10)
+
+    stage_summary = {
+        "enacted": "Has become law with direct local impact.",
+        "passed": "Advanced past one chamber and could aid constituents.",
+        "committee": "Still in committee with possible local effects.",
+        "introduced": "Early proposal with possible local effects.",
+    }
+    return _limit_words(stage_summary.get(stage, "May affect constituents if it advances."), 10)
+
+
 def summarize_finance_alignment(constituent_share: float | None, pac_share: float | None) -> str:
     if constituent_share is None or pac_share is None:
-        return "Funding mix becomes more useful after a full finance refresh with state and committee aggregates."
+        return "The funding mix becomes clearer after a full finance refresh."
     if constituent_share >= 0.4 and pac_share <= 0.2:
-        return "Fundraising is tilted toward individual donors, with a comparatively lighter PAC share."
+        return "This funding mix leans toward individual donors."
     if pac_share >= 0.3:
-        return "A sizable portion of this campaign committee's funding comes from PACs and other organized committees."
-    return "The funding mix is blended between individual donors and organized committees."
+        return "A large share of receipts comes from organized committees."
+    return "This funding mix is split between individuals and organized committees."
 
 
 def _build_rationale(relevant_bills, mapped_areas: list[str]) -> str:
@@ -81,3 +128,10 @@ def _label_for_score(score: int) -> str:
     if score >= 25:
         return "Early or uneven"
     return "Low visible follow-through"
+
+
+def _limit_words(text: str, max_words: int) -> str:
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[:max_words]).rstrip(".,") + "."

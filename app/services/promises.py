@@ -37,11 +37,9 @@ class PromiseService:
 
     def get_promises(self, member: dict[str, Any], force: bool = False) -> list[PromiseItem]:
         bioguide_id = member["bioguideId"]
-        cached = self.db.load_snapshot("promises", bioguide_id)
+        cached = self.load_cached_promises(bioguide_id)
         if cached and not force:
-            payload, fetched_at = cached
-            if datetime.now(timezone.utc) - fetched_at < timedelta(hours=self.settings.promise_cache_hours):
-                return [PromiseItem.model_validate(item) for item in payload.get("items", [])]
+            return cached
 
         manual = self._load_manual_promises().get(bioguide_id, [])
         if manual:
@@ -49,9 +47,21 @@ class PromiseService:
             self.db.save_snapshot("promises", bioguide_id, {"items": [item.model_dump(mode="json") for item in items]})
             return items
 
+        if not force:
+            return []
+
         inferred = self._infer_from_official_site(member.get("officialWebsiteUrl"))
         self.db.save_snapshot("promises", bioguide_id, {"items": [item.model_dump(mode="json") for item in inferred]})
         return inferred
+
+    def load_cached_promises(self, bioguide_id: str) -> list[PromiseItem] | None:
+        cached = self.db.load_snapshot("promises", bioguide_id)
+        if not cached:
+            return None
+        payload, fetched_at = cached
+        if datetime.now(timezone.utc) - fetched_at >= timedelta(hours=self.settings.promise_cache_hours):
+            return None
+        return [PromiseItem.model_validate(item) for item in payload.get("items", [])]
 
     def _load_manual_promises(self) -> dict[str, list[dict[str, Any]]]:
         if not self.manual_path.exists():
