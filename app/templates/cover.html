@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Civic Ledger{% endblock %}
+{% block content %}
+  <section class="cover-shell">
+    <div class="cover-nav">
+      <a class="cover-link" href="{{ request.url_for('officeholders') }}">Officeholders</a>
+      <a class="cover-link" href="{{ request.url_for('definitions') }}">Definitions</a>
+    </div>
+
+    <div class="cover-panel">
+      <p class="eyebrow">Civic Ledger</p>
+      <h1>Follow the money. Check the work.</h1>
+      <p class="lede">
+        A House and Senate tracker that helps people see who funds elected officials and what those officials have actually done in office.
+      </p>
+      <div class="cover-actions">
+        <a class="button-primary cover-button" href="{{ request.url_for('officeholders') }}">Explore officeholders</a>
+        <a class="button-secondary cover-button" href="{{ request.url_for('definitions') }}">Learn the basics</a>
+      </div>
+    </div>
+
+    <div class="cover-grid">
+      <article class="cover-card">
+        <strong>What this site does</strong>
+        <p>Shows campaign money, donor patterns, visible bill work, and plain-language scorecards in one place.</p>
+      </article>
+      <article class="cover-card">
+        <strong>Why it matters</strong>
+        <p>People should be able to compare campaign funding with the work elected officials actually deliver.</p>
+      </article>
+      <article class="cover-card">
+        <strong>What comes next</strong>
+        <p>A future news module can add neutral-source headlines and images without changing the core data model.</p>
+      </article>
+    </div>
+  </section>
+{% endblock %}

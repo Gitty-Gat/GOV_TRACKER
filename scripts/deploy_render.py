@@ -15,6 +15,8 @@ from app.settings import Settings
 
 SERVICE_NAME = "civic-ledger"
 HEALTH_PATH = "/healthz"
+BUILD_COMMAND = "pip install -r requirements.txt && (python scripts/bootstrap_precomputed_data.py || true)"
+START_COMMAND = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 
 def git_remote_url() -> str:
@@ -138,8 +140,8 @@ def create_service(settings: Settings, owner_id: str, repo_url: str) -> dict:
             "region": "oregon",
             "healthCheckPath": HEALTH_PATH,
             "envSpecificDetails": {
-                "buildCommand": "pip install -r requirements.txt && (python scripts/refresh_directory_metrics.py || true)",
-                "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+                "buildCommand": BUILD_COMMAND,
+                "startCommand": START_COMMAND,
             },
         },
     }
@@ -165,8 +167,8 @@ def update_service(settings: Settings, service_id: str, repo_url: str) -> dict:
             "region": "oregon",
             "healthCheckPath": HEALTH_PATH,
             "envSpecificDetails": {
-                "buildCommand": "pip install -r requirements.txt && (python scripts/refresh_directory_metrics.py || true)",
-                "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+                "buildCommand": BUILD_COMMAND,
+                "startCommand": START_COMMAND,
             },
         },
     }

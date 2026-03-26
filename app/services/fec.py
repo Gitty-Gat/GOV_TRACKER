@@ -96,6 +96,7 @@ class FECService:
             notes.append("Other receipts and adjustments capture the portion of reported receipts outside individuals, organized committees, and transfers.")
 
         return FinanceSummary(
+            status="enriched",
             available=True,
             candidate_id=candidate["candidate_id"],
             principal_committee_id=committee_id,
@@ -273,14 +274,14 @@ class FECService:
         if self.settings.fec_api_key == "DEMO_KEY":
             notes.append("Provide a personal data.gov key in FEC_API_KEY for higher throughput.")
         return FinanceSummary(
+            status="partial" if available else "pending",
             available=available,
             warning=f"Live finance refresh failed: {error_text}" if error_text else "Showing cached directory finance while detailed finance loads.",
             candidate_id=metric.candidate_id if metric else None,
             principal_committee_id=metric.principal_committee_id if metric else None,
             cycle=self.settings.default_cycle,
-            total_raised=metric.total_raised or 0.0 if metric else 0.0,
-            cash_on_hand=metric.cash_on_hand or 0.0 if metric else 0.0,
-            other_receipts=metric.total_raised or 0.0 if metric else 0.0,
+            total_raised=metric.total_raised if metric else None,
+            cash_on_hand=metric.cash_on_hand if metric else None,
             pac_share=metric.pac_share if metric else None,
             top_donors=donors,
             notes=notes,
@@ -517,13 +518,13 @@ class FECService:
 
     def _has_consistent_receipt_buckets(self, summary: FinanceSummary) -> bool:
         bucket_total = round(
-            summary.individual_contributions
-            + summary.organized_committee_contributions
-            + summary.transfer_contributions
-            + summary.other_receipts,
+            (summary.individual_contributions or 0.0)
+            + (summary.organized_committee_contributions or 0.0)
+            + (summary.transfer_contributions or 0.0)
+            + (summary.other_receipts or 0.0),
             2,
         )
-        return round(summary.total_raised, 2) == bucket_total
+        return summary.total_raised is not None and round(summary.total_raised, 2) == bucket_total
 
 
 def _pick_best_candidate(member: dict[str, Any], results: list[dict[str, Any]]) -> dict[str, Any] | None:

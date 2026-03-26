@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.db import Database, utc_now_iso
-from app.models import ActivitySummary, DeliveryScore, DirectoryMetric, FinanceSummary, OfficialCard, OfficialDetail, PromiseItem
+from app.models import ActivitySummary, DirectoryMetric, FinanceSummary, OfficialCard, OfficialDetail, PromiseItem
 from app.services.congress import CongressService
 from app.services.fec import FECService
 from app.services.promises import PromiseService
@@ -23,7 +23,7 @@ class DashboardService:
         state: str | None = None,
         sort_by: str = "name",
         force_sync: bool = False,
-    ):
+    ) -> list[OfficialCard]:
         cards = self.db.list_officials(search=search, chamber=chamber, party=party, state=state)
         metrics = {
             key: DirectoryMetric.model_validate(payload)
@@ -44,24 +44,13 @@ class DashboardService:
             return cached
         return self._build_detail_from_cached_data(bioguide_id)
 
-    def refresh_official_detail(self, bioguide_id: str, force_live: bool = True) -> OfficialDetail:
-        member = self.congress.load_cached_member_detail(bioguide_id) or self.congress.get_member_detail(bioguide_id, force=force_live)
-        card = self.db.get_official_card(bioguide_id)
-        if not card:
-            self.congress.ensure_current_members(force=True)
-            card = self.db.get_official_card(bioguide_id)
-            if not card:
-                raise KeyError(bioguide_id)
+    def seed_baseline_data(self, force: bool = False, limit: int | None = None) -> dict[str, int]:
+        self.congress.ensure_current_members(force=force)
+        try:
+            self.fec.sync_directory_finance_metrics(force=force)
+        except Exception:
+            pass
 
-        activity = self.congress.build_activity_snapshot(bioguide_id, force=force_live)
-        cached_promises = self.promises.load_cached_promises(bioguide_id)
-        promises = self.promises.get_promises(member, force=force_live or not cached_promises)
-        finance = self.fec.build_finance_snapshot(member, force=force_live)
-        return self._store_detail_snapshot(card, member, activity, promises, finance, persist=True)
-
-    def refresh_all_precomputed_data(self, limit: int | None = None) -> dict[str, int]:
-        self.congress.ensure_current_members(force=True)
-        self.fec.sync_directory_finance_metrics(force=True)
         processed = 0
         failed = 0
         payloads = self.db.list_official_payloads()
@@ -70,10 +59,65 @@ class DashboardService:
         for payload in payloads:
             bioguide_id = payload["bioguide_id"]
             try:
-                self.refresh_official_detail(bioguide_id, force_live=False)
+                existing = self._load_detail_snapshot(bioguide_id)
+                if existing and existing.data_readiness != "seeded" and not force:
+                    processed += 1
+                    continue
+
+                member = self.congress.ensure_member_detail_snapshot(bioguide_id)
+                card = self.db.get_official_card(bioguide_id)
+                if not member or not card:
+                    failed += 1
+                    continue
+
+                activity = self.congress.load_cached_activity_snapshot(bioguide_id) or self.congress.build_lightweight_activity_snapshot(
+                    member,
+                    note="Detailed bill movement will appear after the next scheduled refresh.",
+                )
+                promises = self.promises.load_cached_promises(bioguide_id)
+                if promises is None:
+                    promises = self.promises.get_promises(member, force=False)
+                finance = self.fec.load_cached_finance_snapshot(bioguide_id) or self.fec._partial_finance_summary(member, "")
+                self._store_detail_snapshot(card, member, activity, promises or [], finance, persist=True)
                 processed += 1
             except Exception:
                 failed += 1
+
+        self.db.set_meta("baseline_bootstrap_at", utc_now_iso())
+        return {"processed": processed, "failed": failed}
+
+    def refresh_official_detail(self, bioguide_id: str) -> OfficialDetail:
+        member = self.congress.get_member_detail(bioguide_id, force=True)
+        card = self.db.get_official_card(bioguide_id)
+        if not card:
+            self.congress.ensure_current_members(force=True)
+            card = self.db.get_official_card(bioguide_id)
+            if not card:
+                raise KeyError(bioguide_id)
+
+        activity = self.congress.build_activity_snapshot(bioguide_id, force=True)
+        promises = self.promises.get_promises(member, force=True)
+        finance = self.fec.build_finance_snapshot(member, force=True)
+        return self._store_detail_snapshot(card, member, activity, promises, finance, persist=True)
+
+    def refresh_all_precomputed_data(self, limit: int | None = None) -> dict[str, int]:
+        self.seed_baseline_data(force=False, limit=limit)
+        self.congress.ensure_current_members(force=True)
+        self.fec.sync_directory_finance_metrics(force=True)
+
+        processed = 0
+        failed = 0
+        payloads = self.db.list_official_payloads()
+        if limit:
+            payloads = payloads[:limit]
+        for payload in payloads:
+            bioguide_id = payload["bioguide_id"]
+            try:
+                self.refresh_official_detail(bioguide_id)
+                processed += 1
+            except Exception:
+                failed += 1
+
         self.db.set_meta("precomputed_refresh_at", utc_now_iso())
         return {"processed": processed, "failed": failed}
 
@@ -88,26 +132,15 @@ class DashboardService:
         for payload in payloads:
             bioguide_id = payload["bioguide_id"]
             metric = self._load_metric(bioguide_id)
-            if metric and metric.efficiency_score is not None and ((metric.keeps_promises_score is not None and metric.delivery_score is not None) or not full) and not force_refresh:
-                continue
             member = self.congress.load_cached_member_detail(bioguide_id)
             if not member:
                 continue
-            activity = self.congress.load_cached_activity_snapshot(bioguide_id)
-            promises = self.promises.load_cached_promises(bioguide_id) or []
-            delivery = compute_delivery_score(promises, activity or ActivitySummary())
-            keeps_promises = compute_keeps_promises_score(promises, activity or ActivitySummary())
-            self._ensure_efficiency_metric(
-                bioguide_id,
-                member,
-                metric,
-                force_refresh=force_refresh,
-                full=full,
-                activity=activity,
-                promises=promises,
-                delivery_score=delivery,
-                keeps_promises_score=keeps_promises,
-            )
+            if metric and metric.efficiency_score is not None and not force_refresh:
+                count += 1
+                if limit and count >= limit:
+                    break
+                continue
+            self._ensure_efficiency_metric(bioguide_id, member, metric, force_refresh=force_refresh, full=full)
             count += 1
             if limit and count >= limit:
                 break
@@ -138,12 +171,21 @@ class DashboardService:
         delivery_score = compute_delivery_score(promises, activity)
         keeps_promises_score = compute_keeps_promises_score(promises, activity)
         metric = self._load_metric(card.bioguide_id) or DirectoryMetric()
-        metric.finance_available = finance.available or metric.finance_available
+
+        finance_status = _finance_status(finance)
+        activity_status = _activity_status(activity)
+        promises_status = "enriched" if promises else "pending"
+
+        metric.data_readiness = _compose_readiness(finance_status, activity_status, promises_status)
+        metric.finance_status = finance_status
+        metric.activity_status = activity_status
+        metric.promises_status = promises_status
+        metric.finance_available = finance.available or finance_status != "pending" or metric.finance_available
         metric.candidate_id = finance.candidate_id or metric.candidate_id
         metric.principal_committee_id = finance.principal_committee_id or metric.principal_committee_id
-        if finance.total_raised or metric.total_raised is None:
+        if finance.total_raised is not None or metric.total_raised is None:
             metric.total_raised = finance.total_raised
-        if finance.cash_on_hand or metric.cash_on_hand is None:
+        if finance.cash_on_hand is not None or metric.cash_on_hand is None:
             metric.cash_on_hand = finance.cash_on_hand
         metric.pac_share = finance.pac_share if finance.pac_share is not None else metric.pac_share
         metric.top_donor_names = list(dict.fromkeys([donor.name for donor in finance.top_donors]))[:3] or metric.top_donor_names
@@ -157,19 +199,37 @@ class DashboardService:
             promises=promises,
             delivery_score=delivery_score,
             keeps_promises_score=keeps_promises_score,
-            persist=persist,
+            persist=False,
         )
-        truth_verdict, truth_badge_variant = compute_truth_verdict(keeps_promises_score, delivery_score.overall_score)
-        metric.delivery_score = delivery_score.overall_score
-        metric.keeps_promises_score = keeps_promises_score
-        metric.truth_verdict = truth_verdict
-        metric.truth_badge_variant = truth_badge_variant
+
+        if _has_truth_inputs(promises, activity):
+            truth_verdict, truth_badge_variant = compute_truth_verdict(keeps_promises_score, delivery_score.overall_score)
+            metric.delivery_score = delivery_score.overall_score
+            metric.keeps_promises_score = keeps_promises_score
+            metric.truth_verdict = truth_verdict
+            metric.truth_badge_variant = truth_badge_variant
+            metric.priority_commitment_score = keeps_promises_score
+        else:
+            delivery_score = delivery_score.model_copy(
+                update={
+                    "overall_score": None,
+                    "label": "Insufficient data",
+                    "explanation": "This score appears after the app has both clear priorities and deeper legislative detail.",
+                }
+            )
+            metric.delivery_score = None
+            metric.keeps_promises_score = None
+            metric.truth_verdict = None
+            metric.truth_badge_variant = None
+            metric.priority_commitment_score = None
+
+        if metric.pac_share is not None and metric.keeps_promises_score is not None:
+            metric.pac_alignment_signal = round((metric.pac_share * 100) * ((100 - metric.keeps_promises_score) / 100))
+        else:
+            metric.pac_alignment_signal = None
+
         if persist:
             metric.last_refreshed_at = utc_now_iso()
-        metric.priority_commitment_score = keeps_promises_score
-        if metric.pac_share is not None:
-            metric.pac_alignment_signal = round((metric.pac_share * 100) * ((100 - keeps_promises_score) / 100))
-        if persist:
             self.db.save_snapshot("directory_metric", card.bioguide_id, metric.model_dump(mode="json"))
 
         enriched_card = self._apply_metric(card, metric)
@@ -180,6 +240,7 @@ class DashboardService:
             finance=finance,
             promises=promises,
             delivery_score=delivery_score,
+            data_readiness=metric.data_readiness,
             methodology_notes=[
                 "Finance data comes from OpenFEC and legislative activity comes from Congress.gov.",
                 "Issue priorities are strongest when they come from curated campaign-platform entries. Otherwise they are inferred from official website language.",
@@ -218,6 +279,10 @@ class DashboardService:
                 "truth_verdict": metric.truth_verdict,
                 "truth_badge_variant": metric.truth_badge_variant,
                 "last_refreshed_at": metric.last_refreshed_at,
+                "data_readiness": metric.data_readiness,
+                "finance_status": metric.finance_status,
+                "activity_status": metric.activity_status,
+                "promises_status": metric.promises_status,
                 "priority_commitment_score": metric.priority_commitment_score,
                 "pac_alignment_signal": metric.pac_alignment_signal,
                 "pac_share": metric.pac_share,
@@ -234,42 +299,34 @@ class DashboardService:
         full: bool = False,
         activity: ActivitySummary | None = None,
         promises: list[PromiseItem] | None = None,
-        delivery_score: DeliveryScore | None = None,
+        delivery_score=None,
         keeps_promises_score: int | None = None,
         persist: bool = True,
     ) -> DirectoryMetric:
         metric = metric or self._load_metric(bioguide_id) or DirectoryMetric()
-        if metric.efficiency_score is not None and ((metric.keeps_promises_score is not None and metric.delivery_score is not None) or not full) and not force_refresh:
+        if metric.efficiency_score is not None and not force_refresh:
             return metric
 
-        sponsored = (member.get("sponsoredLegislation") or {}).get("count", 0)
-        cosponsored = (member.get("cosponsoredLegislation") or {}).get("count", 0)
-        terms = member.get("terms") or []
-        first_start = terms[0].get("startYear") if terms else None
-        current_start = terms[-1].get("startYear") if terms else None
-        years_in_office = max(1, 2026 - int(first_start or current_start or 2026) + 1)
-        throughput = (sponsored * 1.8 + cosponsored * 0.35) / years_in_office
+        sponsored = (member.get("sponsoredLegislation") or {}).get("count")
+        cosponsored = (member.get("cosponsoredLegislation") or {}).get("count")
+        if sponsored is None and cosponsored is None and member.get("detailReadiness") != "enriched":
+            metric.efficiency_score = None
+            metric.years_in_office = _years_in_office(member)
+            if persist:
+                self.db.save_snapshot("directory_metric", bioguide_id, metric.model_dump(mode="json"))
+            return metric
+
+        sponsored_count = int(sponsored or 0)
+        cosponsored_count = int(cosponsored or 0)
+        years_in_office = _years_in_office(member)
+        throughput = (sponsored_count * 1.8 + cosponsored_count * 0.35) / years_in_office
         efficiency = min(100, round(min(72, throughput)))
         metric.efficiency_score = efficiency
         metric.years_in_office = years_in_office
-        if metric.keeps_promises_score is None or force_refresh:
-            metric.keeps_promises_score = max(0, min(100, round(efficiency * 0.82)))
-        metric.priority_commitment_score = metric.keeps_promises_score
 
-        if full:
-            activity = activity or ActivitySummary()
-            promises = promises or []
-            delivery = delivery_score or compute_delivery_score(promises, activity)
-            keeps_promises = keeps_promises_score if keeps_promises_score is not None else compute_keeps_promises_score(promises, activity)
-            metric.delivery_score = delivery.overall_score
-            metric.keeps_promises_score = keeps_promises
-            metric.priority_commitment_score = keeps_promises
+        if full and activity and activity.status == "enriched":
             advancement_bonus = min(18, activity.passed_count * 3 + activity.enacted_count * 8)
             metric.efficiency_score = min(100, round(max(metric.efficiency_score or 0, efficiency + advancement_bonus)))
-
-        if metric.pac_share is not None:
-            commitment = metric.keeps_promises_score if metric.keeps_promises_score is not None else metric.efficiency_score or 0
-            metric.pac_alignment_signal = round((metric.pac_share * 100) * ((100 - commitment) / 100))
 
         if persist:
             self.db.save_snapshot("directory_metric", bioguide_id, metric.model_dump(mode="json"))
@@ -287,3 +344,40 @@ def _sort_key(card: OfficialCard, sort_by: str):
     if sort_by == "pac_alignment_desc":
         return (-(card.pac_alignment_signal or -1), card.name)
     return (card.name,)
+
+
+def _years_in_office(member: dict) -> int:
+    terms = member.get("terms") or []
+    first_start = terms[0].get("startYear") if terms else None
+    current_start = terms[-1].get("startYear") if terms else None
+    return max(1, 2026 - int(first_start or current_start or 2026) + 1)
+
+
+def _finance_status(finance: FinanceSummary) -> str:
+    if finance.status in {"pending", "partial", "enriched"}:
+        return finance.status
+    if finance.available and finance.top_donors:
+        return "enriched"
+    if finance.available or finance.total_raised is not None or finance.cash_on_hand is not None:
+        return "partial"
+    return "pending"
+
+
+def _activity_status(activity: ActivitySummary) -> str:
+    if activity.status in {"pending", "seeded", "partial", "enriched"}:
+        return activity.status
+    if activity.recent_bills:
+        return "enriched"
+    return "seeded"
+
+
+def _compose_readiness(finance_status: str, activity_status: str, promises_status: str) -> str:
+    if finance_status == "enriched" and activity_status == "enriched" and promises_status == "enriched":
+        return "enriched"
+    if finance_status in {"partial", "enriched"} or activity_status == "enriched" or promises_status == "enriched":
+        return "partial"
+    return "seeded"
+
+
+def _has_truth_inputs(promises: list[PromiseItem], activity: ActivitySummary) -> bool:
+    return bool(promises and activity.status == "enriched" and activity.recent_bills)

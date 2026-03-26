@@ -25,5 +25,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Seed baseline snapshots
+        run: python scripts/bootstrap_precomputed_data.py
+
       - name: Refresh precomputed data
         run: python scripts/refresh_all_data.py

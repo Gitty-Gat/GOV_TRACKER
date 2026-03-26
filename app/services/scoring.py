@@ -20,7 +20,7 @@ PROMISE_POLICY_MAP: dict[str, list[str]] = {
 def compute_delivery_score(promises: list[PromiseItem], activity: ActivitySummary) -> DeliveryScore:
     if not promises or not activity.recent_bills:
         return DeliveryScore(
-            overall_score=0,
+            overall_score=None,
             label="Insufficient data",
             explanation="The score becomes meaningful after the dashboard has both issue priorities and recent legislative activity.",
         )

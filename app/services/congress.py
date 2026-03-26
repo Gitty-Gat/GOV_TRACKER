@@ -64,6 +64,7 @@ class CongressService:
         try:
             payload = self._request_json(f"/member/{bioguide_id}", {"format": "json"})
             member = payload["member"]
+            member["detailReadiness"] = "enriched"
             self.db.upsert_official(self._normalize_member_detail(member))
             self.db.save_snapshot("member_detail", bioguide_id, member)
             return member
@@ -81,6 +82,15 @@ class CongressService:
             return payload
         return self._fallback_member_detail(bioguide_id)
 
+    def ensure_member_detail_snapshot(self, bioguide_id: str) -> dict[str, Any] | None:
+        cached = self.db.load_snapshot("member_detail", bioguide_id)
+        if cached:
+            return cached[0]
+        fallback = self._fallback_member_detail(bioguide_id)
+        if fallback:
+            self.db.save_snapshot("member_detail", bioguide_id, fallback)
+        return fallback
+
     def build_activity_snapshot(self, bioguide_id: str, force: bool = False) -> ActivitySummary:
         cached = self.db.load_snapshot("activity", bioguide_id)
         if cached and not force:
@@ -95,12 +105,14 @@ class CongressService:
             "Activity scores are computed from recent sponsored and cosponsored legislation sampled from Congress.gov.",
             "Sponsored bills are weighted more heavily than cosponsored bills.",
         ]
+        detailed_available = True
         try:
             sponsored = self._fetch_legislation(bioguide_id, "sponsored-legislation", "sponsored", max_items=40)
             cosponsored = self._fetch_legislation(bioguide_id, "cosponsored-legislation", "cosponsored", max_items=40)
         except requests.RequestException:
             sponsored = []
             cosponsored = []
+            detailed_available = False
             notes.append("Congress activity detail is temporarily unavailable under the demo rate limit.")
         policy_weights: Counter[str] = Counter()
         enacted_count = 0
@@ -126,8 +138,9 @@ class CongressService:
             for name, weight in policy_weights.most_common(6)
         ]
         summary = ActivitySummary(
-            sponsored_count_total=(member.get("sponsoredLegislation") or {}).get("count", 0),
-            cosponsored_count_total=(member.get("cosponsoredLegislation") or {}).get("count", 0),
+            status="enriched" if detailed_available else "pending",
+            sponsored_count_total=(member.get("sponsoredLegislation") or {}).get("count") or 0,
+            cosponsored_count_total=(member.get("cosponsoredLegislation") or {}).get("count") or 0,
             enacted_count=enacted_count,
             passed_count=passed_count,
             committee_progress_count=committee_progress_count,
@@ -158,8 +171,9 @@ class CongressService:
         if note:
             notes.append(note)
         return ActivitySummary(
-            sponsored_count_total=(member.get("sponsoredLegislation") or {}).get("count", 0),
-            cosponsored_count_total=(member.get("cosponsoredLegislation") or {}).get("count", 0),
+            status="seeded",
+            sponsored_count_total=(member.get("sponsoredLegislation") or {}).get("count") or 0,
+            cosponsored_count_total=(member.get("cosponsoredLegislation") or {}).get("count") or 0,
             notes=notes,
         )
 
@@ -327,6 +341,7 @@ class CongressService:
             return None
         return {
             "bioguideId": bioguide_id,
+            "detailReadiness": "seeded",
             "birthYear": None,
             "currentMember": True,
             "depiction": {"imageUrl": stored.get("image_url"), "attribution": "Congress.gov image"},
@@ -337,8 +352,8 @@ class CongressService:
             "district": stored.get("district"),
             "officialWebsiteUrl": stored.get("website_url"),
             "partyHistory": [{"partyName": _normalize_party(stored.get("party")), "partyAbbreviation": (stored.get("party") or "")[:1]}],
-            "sponsoredLegislation": {"count": 0, "url": None},
-            "cosponsoredLegislation": {"count": 0, "url": None},
+            "sponsoredLegislation": {"count": None, "url": None},
+            "cosponsoredLegislation": {"count": None, "url": None},
             "state": stored.get("state"),
             "terms": stored.get("terms"),
             "updateDate": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),

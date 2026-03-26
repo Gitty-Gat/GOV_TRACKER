@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Civic Ledger{% endblock %}
+{% block title %}Officeholders · Civic Ledger{% endblock %}
 {% block content %}
   <section class="hero">
     <div>
-      <p class="eyebrow">Congress dashboard</p>
-      <h1>Is your representative really working for you?</h1>
+      <p class="eyebrow">Officeholders</p>
+      <h1>Search the people in office</h1>
       <p class="lede">
-        See who funds them, what they promised, and what they’ve actually done.
+        Open a card to see who funds them, what was seeded already, and what still needs deeper refreshes.
       </p>
     </div>
     <div class="hero-stats">
@@ -26,28 +26,30 @@
   </section>
 
   <section class="panel">
-    <p class="eyebrow">Score guide</p>
-    <h2>How to read the cards</h2>
-    <div class="panel-grid">
-      <article class="list-card">
-        <strong>Truth verdict</strong>
+    <div class="panel-head">
+      <div>
+        <p class="eyebrow">Score guide</p>
+        <h2>How to read the cards</h2>
+      </div>
+      <a class="text-link" href="{{ request.url_for('definitions') }}">Learn the basics</a>
+    </div>
+    <div class="accordion-list">
+      <details class="accordion-card">
+        <summary>Truth verdict</summary>
         <p>A quick verdict on whether visible work lines up with stated priorities.</p>
-        <p class="tiny-note">It blends promise coverage with delivery quality.</p>
-      </article>
-      <article class="list-card">
-        <strong>Efficiency metric</strong>
-        <p>Shows how much bill work an official moves each year.</p>
-        <p class="tiny-note">Higher means more visible output for time in office.</p>
-      </article>
-      <article class="list-card">
-        <strong>Delivery index</strong>
+        <p class="tiny-note">It only appears after the app has enough promise and legislative data.</p>
+      </details>
+      <details class="accordion-card">
+        <summary>Delivery index</summary>
         <p>Shows how far matched bills actually moved.</p>
         <p class="tiny-note">Higher means stronger follow-through on visible priorities.</p>
-      </article>
+      </details>
+      <details class="accordion-card">
+        <summary>Efficiency metric</summary>
+        <p>Shows how much bill work an official moves each year.</p>
+        <p class="tiny-note">It stays pending until member detail is rich enough to score fairly.</p>
+      </details>
     </div>
-    <p class="tiny-note">
-      The PAC alignment sort is only a signal. It rises when PAC-backed money is higher and visible follow-through is lower.
-    </p>
   </section>
 
   <section class="panel">
@@ -111,12 +113,21 @@
             <p>{{ official.state }}{% if official.district %} · District {{ official.district }}{% endif %}</p>
           </div>
         </div>
+
+        <div class="status-row">
+          <span class="status-pill status-{{ official.data_readiness }}">{{ official.data_readiness|title }}</span>
+          <span class="status-pill status-{{ official.finance_status }}">{{ "Finance " ~ official.finance_status }}</span>
+          <span class="status-pill status-{{ official.activity_status }}">{{ "Legislative " ~ official.activity_status }}</span>
+        </div>
+
         <div class="card-metrics">
           <div class="metric-line">
             <span>Raised last cycle</span>
             <strong>
               {% if official.total_raised is not none %}
                 ${{ "{:,.0f}".format(official.total_raised) }}
+              {% elif official.finance_status == "pending" %}
+                Finance pending
               {% else %}
                 Not loaded
               {% endif %}
@@ -124,35 +135,26 @@
           </div>
           <div class="metric-line">
             <span>Efficiency metric</span>
-            <strong>
-              {% if official.efficiency_score is not none %}
-                {{ official.efficiency_score }}
-              {% else %}
-                Pending
-              {% endif %}
-            </strong>
+            <strong>{{ official.efficiency_score if official.efficiency_score is not none else "Pending" }}</strong>
           </div>
           <div class="metric-line">
             <span>Delivery index</span>
-            <strong>
-              {% if official.delivery_score is not none %}
-                {{ official.delivery_score }}
-              {% else %}
-                Pending
-              {% endif %}
-            </strong>
+            <strong>{{ official.delivery_score if official.delivery_score is not none else "Pending" }}</strong>
           </div>
           <div class="metric-line">
             <span>Top donors</span>
             <strong class="donor-line">
               {% if official.top_donor_names %}
                 {{ official.top_donor_names|join(", ") }}
+              {% elif official.finance_status == "pending" %}
+                Finance pending
               {% else %}
                 Loading when available
               {% endif %}
             </strong>
           </div>
         </div>
+
         <div class="official-card-foot">
           <span>{{ official.party or "Unknown party" }}</span>
           <div class="truth-badge truth-badge-{{ official.truth_badge_variant or 'unknown' }}">
@@ -162,11 +164,11 @@
               <i class="{{ 'active' if (official.truth_badge_variant or '') in ['aligned', 'mixed'] else '' }}"></i>
               <i class="{{ 'active' if (official.truth_badge_variant or '') in ['aligned'] else '' }}"></i>
             </span>
-            <strong>{{ official.truth_verdict or "Unrated" }}</strong>
+            <strong>{{ official.truth_verdict or "Needs more data" }}</strong>
           </div>
         </div>
         {% if official.last_refreshed_at %}
-          <p class="tiny-note">Updated {{ official.last_refreshed_at.replace('T', ' ')[:16] }}</p>
+          <p class="tiny-note">{{ official.data_readiness|title }} snapshot · updated {{ official.last_refreshed_at.replace('T', ' ')[:16] }}</p>
         {% endif %}
       </a>
     {% endfor %}

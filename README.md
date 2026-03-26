@@ -9,7 +9,9 @@ This MVP ships as a FastAPI application with a designed frontend, precomputed pu
 
 ## Product shape
 
-- Filterable House/Senate landing dashboard with member photos and search.
+- Cover page at `/` with a plain-language introduction and clear next-step buttons.
+- Searchable officeholder dashboard at `/officeholders` with member photos, filters, and collapsible score guidance.
+- Definitions page at `/definitions` for first-time users.
 - Official detail view with war-chest metrics, major donors, PAC audit trails, state contribution mix, legislative activity, a truth verdict badge, and a promise-vs-delivery board.
 - JSON API endpoints for reuse by a richer frontend later.
 
@@ -31,6 +33,8 @@ This MVP ships as a FastAPI application with a designed frontend, precomputed pu
 
 - Production is designed to use `DATABASE_URL` for hosted Postgres.
 - Local development falls back to `DATABASE_PATH` SQLite.
+- Render build now seeds a fast baseline snapshot set for every current House and Senate member.
+- Deeper activity, finance, donor, PAC, and promise enrichment runs outside the request path.
 - If the Congress API rate-limits, the app falls back to a public current-member dataset so the directory still works.
 - The app is designed to work with `DEMO_KEY`, but meaningful finance depth requires real `CONGRESS_API_KEY` and `FEC_API_KEY` values.
 
@@ -54,7 +58,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
-python scripts\bootstrap_members.py
+python scripts\bootstrap_precomputed_data.py
 uvicorn app.main:app --reload
 ```
 
@@ -94,17 +98,17 @@ Render is the primary host for this app.
 .venv\Scripts\python scripts\deploy_render.py
 ```
 
-The deployment script creates a `civic-ledger` web service if it does not exist, or triggers a new deploy if it already exists. During build it keeps the fallback SQLite path warm with:
+The deployment script creates a `civic-ledger` web service if it does not exist, or triggers a new deploy if it already exists. During build it seeds baseline officeholder snapshots with:
 
 ```bash
-python scripts/refresh_directory_metrics.py || true
+python scripts/bootstrap_precomputed_data.py || true
 ```
 
 The service uses `/healthz` as its health check.
 
 ### Scheduled refresh
 
-Use `.github/workflows/refresh-data.yml` to refresh the full dataset on a schedule or by manual dispatch. This is the intended full precompute path for production, especially when `DATABASE_URL` is set.
+Use `.github/workflows/refresh-data.yml` to seed baseline snapshots and then run the deep enrichment refresh on a schedule or by manual dispatch. This is the intended full precompute path for production, especially when `DATABASE_URL` is set.
 
 Recommended GitHub secrets:
 
@@ -122,3 +126,7 @@ You still need:
 - `VERCEL_TOKEN`
 
 `VERCEL_TEAM_ID` only identifies the team scope. It does not authenticate deploys by itself.
+
+## Future news module
+
+The current release does not ship a live news carousel. The codebase only documents a future adapter layer for neutral-source or official congressional headlines so the cover page can later add current-events context without mixing that concern into the scoring system.

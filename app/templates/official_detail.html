@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ detail.card.name }} · Civic Ledger{% endblock %}
 {% block content %}
-  <a class="back-link" href="{{ request.url_for('home') }}">← Back to dashboard</a>
+  <a class="back-link" href="{{ request.url_for('officeholders') }}">← Back to officeholders</a>
 
   <section class="detail-hero detail-hero-wide">
     <div class="profile-block">
@@ -17,6 +17,12 @@
           {{ detail.card.chamber }} · {{ detail.card.party or "Unknown party" }} · {{ detail.card.state }}
           {% if detail.card.district %} · District {{ detail.card.district }}{% endif %}
         </p>
+        <div class="status-row status-row-wide">
+          <span class="status-pill status-{{ detail.card.data_readiness }}">{{ detail.card.data_readiness|title }} profile</span>
+          <span class="status-pill status-{{ detail.card.finance_status }}">{{ "Finance " ~ detail.card.finance_status }}</span>
+          <span class="status-pill status-{{ detail.card.activity_status }}">{{ "Legislative " ~ detail.card.activity_status }}</span>
+          <span class="status-pill status-{{ detail.card.promises_status }}">{{ "Promises " ~ detail.card.promises_status }}</span>
+        </div>
         {% if detail.card.last_refreshed_at %}
           <p class="tiny-note">Last updated {{ detail.card.last_refreshed_at.replace('T', ' ')[:16] }}</p>
         {% endif %}
@@ -37,36 +43,64 @@
           <i class="{{ 'active' if (detail.card.truth_badge_variant or '') in ['aligned', 'mixed'] else '' }}"></i>
           <i class="{{ 'active' if (detail.card.truth_badge_variant or '') in ['aligned'] else '' }}"></i>
         </span>
-        <strong>{{ detail.card.truth_verdict or "Unrated" }}</strong>
-        <small>Combines promise coverage with delivery quality.</small>
+        <strong>{{ detail.card.truth_verdict or "Needs more data" }}</strong>
+        <small>
+          {% if detail.card.truth_verdict %}
+            Combines promise coverage with delivery quality.
+          {% else %}
+            This verdict appears after the app has enough promise and legislative detail.
+          {% endif %}
+        </small>
       </div>
     </div>
   </section>
 
+  {% if detail.data_readiness == "seeded" %}
+    <p class="callout">This profile was seeded for quick site launch. Finance and bill detail will deepen after the scheduled refresh runs.</p>
+  {% endif %}
+
   <section class="summary-grid">
     <article class="summary-card accent">
       <span class="metric-label">Efficiency metric</span>
-      <strong>{{ detail.card.efficiency_score or 0 }}</strong>
+      <strong>{{ detail.card.efficiency_score if detail.card.efficiency_score is not none else "Pending" }}</strong>
       <p class="tiny-note">Time-normalized legislative output.</p>
     </article>
     <article class="summary-card">
       <span class="metric-label">Delivery index</span>
-      <strong>{{ detail.card.delivery_score or detail.delivery_score.overall_score }}</strong>
+      <strong>{{ detail.card.delivery_score if detail.card.delivery_score is not none else "Pending" }}</strong>
       <p class="tiny-note">Higher means stronger follow-through on visible priorities.</p>
     </article>
     <article class="summary-card">
       <span class="metric-label">Cash on hand</span>
-      <strong>${{ "{:,.0f}".format(detail.finance.cash_on_hand) }}</strong>
+      <strong>
+        {% if detail.finance.cash_on_hand is not none %}
+          ${{ "{:,.0f}".format(detail.finance.cash_on_hand) }}
+        {% else %}
+          Pending
+        {% endif %}
+      </strong>
       <p class="tiny-note">As of {{ detail.finance.coverage_end_date[:10] if detail.finance.coverage_end_date else ('cycle ' ~ (detail.finance.cycle or 'current')) }}</p>
     </article>
     <article class="summary-card">
       <span class="metric-label">Total receipts</span>
-      <strong>${{ "{:,.0f}".format(detail.finance.total_raised) }}</strong>
+      <strong>
+        {% if detail.finance.total_raised is not none %}
+          ${{ "{:,.0f}".format(detail.finance.total_raised) }}
+        {% else %}
+          Pending
+        {% endif %}
+      </strong>
       <p class="tiny-note">For the {{ detail.finance.cycle or "current" }} cycle.</p>
     </article>
     <article class="summary-card">
       <span class="metric-label">PAC share</span>
-      <strong>{{ ((detail.finance.pac_share or 0) * 100)|round(1) }}%</strong>
+      <strong>
+        {% if detail.finance.pac_share is not none %}
+          {{ (detail.finance.pac_share * 100)|round(1) }}%
+        {% else %}
+          Pending
+        {% endif %}
+      </strong>
       <p class="tiny-note">Percent of total receipts from organized committees.</p>
     </article>
     <article class="summary-card">
@@ -75,10 +109,10 @@
         {% if detail.finance.constituent_share is not none %}
           {{ (detail.finance.constituent_share * 100)|round(1) }}%
         {% else %}
-          N/A
+          Pending
         {% endif %}
       </strong>
-      <p class="tiny-note">{{ detail.finance.in_state_share_label or "Based on geocoded donor-state receipts." }}</p>
+      <p class="tiny-note">{{ detail.finance.in_state_share_label or "Based on geocoded donor-state receipts when finance detail is available." }}</p>
     </article>
   </section>
 
@@ -130,7 +164,7 @@
             {% endif %}
           </div>
           <div class="comparison-side">
-            {% if row.delivery %}
+            {% if row.delivery and detail.card.truth_verdict %}
               <div class="comparison-head">
                 <strong>{{ row.delivery.delivery_label }}</strong>
                 <span class="delivery-pill">{{ row.delivery.matched_action_count }} matched bills</span>
@@ -145,10 +179,10 @@
               </p>
             {% else %}
               <div class="comparison-head">
-                <strong>No visible movement</strong>
-                <span class="delivery-pill">0 matched bills</span>
+                <strong>Needs more data</strong>
+                <span class="delivery-pill">{{ detail.card.activity_status|title }}</span>
               </div>
-              <p>No matched bills were visible in the current sample.</p>
+              <p>Delivery scoring appears after the app has both promise evidence and deeper legislative detail.</p>
             {% endif %}
           </div>
         </article>
@@ -169,35 +203,44 @@
       {% if detail.finance.warning %}
         <p class="callout warning">{{ detail.finance.warning }}</p>
       {% endif %}
-      {% set total_receipts = detail.finance.total_raised or 0 %}
-      {% set individual_amount = detail.finance.individual_contributions or 0 %}
-      {% set committee_amount = detail.finance.organized_committee_contributions or detail.finance.pac_contributions or 0 %}
-      {% set transfer_amount = detail.finance.transfer_contributions or 0 %}
-      {% set other_amount = detail.finance.other_receipts or 0 %}
-      {% set individual_pct = ((individual_amount / (total_receipts or 1)) * 100)|round(2) %}
-      {% set committee_pct = ((committee_amount / (total_receipts or 1)) * 100)|round(2) %}
-      {% set transfer_pct = ((transfer_amount / (total_receipts or 1)) * 100)|round(2) %}
-      {% set other_pct = ((other_amount / (total_receipts or 1)) * 100)|round(2) %}
-      {% set committee_end = (individual_pct + committee_pct)|round(2) %}
-      {% set transfer_end = (committee_end + transfer_pct)|round(2) %}
-      {% set other_end = (transfer_end + other_pct)|round(2) %}
-      <div class="donut-wrap">
-        <div
-          class="mix-donut"
-          style="background: conic-gradient(var(--teal) 0 {{ individual_pct }}%, var(--coral) {{ individual_pct }}% {{ committee_end }}%, var(--gold) {{ committee_end }}% {{ transfer_end }}%, var(--berry) {{ transfer_end }}% {{ other_end }}%);"
-        >
-          <div>
-            <strong>${{ "{:,.0f}".format(total_receipts) }}</strong>
-            <span>Total receipts</span>
+      {% if detail.finance.status == "enriched" and detail.finance.total_raised is not none %}
+        {% set total_receipts = detail.finance.total_raised or 0 %}
+        {% set individual_amount = detail.finance.individual_contributions or 0 %}
+        {% set committee_amount = detail.finance.organized_committee_contributions or detail.finance.pac_contributions or 0 %}
+        {% set transfer_amount = detail.finance.transfer_contributions or 0 %}
+        {% set other_amount = detail.finance.other_receipts or 0 %}
+        {% set individual_pct = ((individual_amount / (total_receipts or 1)) * 100)|round(2) %}
+        {% set committee_pct = ((committee_amount / (total_receipts or 1)) * 100)|round(2) %}
+        {% set transfer_pct = ((transfer_amount / (total_receipts or 1)) * 100)|round(2) %}
+        {% set other_pct = ((other_amount / (total_receipts or 1)) * 100)|round(2) %}
+        {% set committee_end = (individual_pct + committee_pct)|round(2) %}
+        {% set transfer_end = (committee_end + transfer_pct)|round(2) %}
+        {% set other_end = (transfer_end + other_pct)|round(2) %}
+        <div class="donut-wrap">
+          <div
+            class="mix-donut"
+            style="background: conic-gradient(var(--teal) 0 {{ individual_pct }}%, var(--coral) {{ individual_pct }}% {{ committee_end }}%, var(--gold) {{ committee_end }}% {{ transfer_end }}%, var(--berry) {{ transfer_end }}% {{ other_end }}%);"
+          >
+            <div>
+              <strong>${{ "{:,.0f}".format(total_receipts) }}</strong>
+              <span>Total receipts</span>
+            </div>
           </div>
+          <ul class="legend">
+            <li><span class="swatch teal"></span>Individuals: ${{ "{:,.0f}".format(individual_amount) }}</li>
+            <li><span class="swatch coral"></span>Organized committees: ${{ "{:,.0f}".format(committee_amount) }}</li>
+            <li><span class="swatch gold"></span>Transfers: ${{ "{:,.0f}".format(transfer_amount) }}</li>
+            <li><span class="swatch berry"></span>Other receipts and adjustments: ${{ "{:,.0f}".format(other_amount) }}</li>
+          </ul>
         </div>
-        <ul class="legend">
-          <li><span class="swatch teal"></span>Individuals: ${{ "{:,.0f}".format(individual_amount) }}</li>
-          <li><span class="swatch coral"></span>Organized committees: ${{ "{:,.0f}".format(committee_amount) }}</li>
-          <li><span class="swatch gold"></span>Transfers: ${{ "{:,.0f}".format(transfer_amount) }}</li>
-          <li><span class="swatch berry"></span>Other receipts and adjustments: ${{ "{:,.0f}".format(other_amount) }}</li>
-        </ul>
-      </div>
+      {% elif detail.finance.total_raised is not none %}
+        <div class="list-card">
+          <strong>${{ "{:,.0f}".format(detail.finance.total_raised) }}</strong>
+          <p>Baseline finance totals are loaded. Detailed donor mix will appear after the deeper refresh.</p>
+        </div>
+      {% else %}
+        <p class="callout">Finance detail is still pending for this profile.</p>
+      {% endif %}
       <p class="muted-copy">{{ finance_signal }}</p>
       {% for note in detail.finance.notes %}
         <p class="tiny-note">{{ note }}</p>
@@ -318,11 +361,15 @@
         <h2>Recent bills and actions</h2>
       </div>
     </div>
-    <div class="activity-summary">
-      <span>Sponsored bills: {{ detail.activity.sponsored_count_total }}</span>
-      <span>Cosponsored bills: {{ detail.activity.cosponsored_count_total }}</span>
-      <span>Advanced or enacted in sample: {{ detail.activity.passed_count + detail.activity.enacted_count }}</span>
-    </div>
+    {% if detail.activity.status == "enriched" %}
+      <div class="activity-summary">
+        <span>Sponsored bills: {{ detail.activity.sponsored_count_total }}</span>
+        <span>Cosponsored bills: {{ detail.activity.cosponsored_count_total }}</span>
+        <span>Advanced or enacted in sample: {{ detail.activity.passed_count + detail.activity.enacted_count }}</span>
+      </div>
+    {% else %}
+      <p class="callout">Legislative detail is still pending for this profile.</p>
+    {% endif %}
     <div class="legislation-grid">
       {% for bill in detail.activity.recent_bills %}
         <div class="list-card">

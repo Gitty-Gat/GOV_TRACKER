@@ -4,6 +4,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+Readiness = Literal["seeded", "partial", "enriched"]
+PendingReadiness = Literal["pending", "seeded", "partial", "enriched"]
+
 
 class OfficialCard(BaseModel):
     bioguide_id: str
@@ -24,6 +27,10 @@ class OfficialCard(BaseModel):
     truth_verdict: str | None = None
     truth_badge_variant: str | None = None
     last_refreshed_at: str | None = None
+    data_readiness: Readiness = "seeded"
+    finance_status: PendingReadiness = "pending"
+    activity_status: PendingReadiness = "pending"
+    promises_status: PendingReadiness = "pending"
     priority_commitment_score: int | None = None
     pac_alignment_signal: int | None = None
     pac_share: float | None = None
@@ -44,6 +51,10 @@ class DirectoryMetric(BaseModel):
     truth_verdict: str | None = None
     truth_badge_variant: str | None = None
     last_refreshed_at: str | None = None
+    data_readiness: Readiness = "seeded"
+    finance_status: PendingReadiness = "pending"
+    activity_status: PendingReadiness = "pending"
+    promises_status: PendingReadiness = "pending"
     priority_commitment_score: int | None = None
     pac_alignment_signal: int | None = None
     years_in_office: int | None = None
@@ -84,6 +95,7 @@ class PolicyAreaStat(BaseModel):
 
 
 class ActivitySummary(BaseModel):
+    status: PendingReadiness = "seeded"
     sponsored_count_total: int = 0
     cosponsored_count_total: int = 0
     enacted_count: int = 0
@@ -131,22 +143,23 @@ class PacAuditTrail(BaseModel):
 
 
 class FinanceSummary(BaseModel):
+    status: PendingReadiness = "pending"
     available: bool = False
     warning: str | None = None
     candidate_id: str | None = None
     principal_committee_id: str | None = None
     principal_committee_name: str | None = None
     cycle: int | None = None
-    total_raised: float = 0.0
-    cash_on_hand: float = 0.0
-    disbursements: float = 0.0
-    individual_contributions: float = 0.0
-    pac_contributions: float = 0.0
-    organized_committee_contributions: float = 0.0
-    transfer_contributions: float = 0.0
-    other_receipts: float = 0.0
+    total_raised: float | None = None
+    cash_on_hand: float | None = None
+    disbursements: float | None = None
+    individual_contributions: float | None = None
+    pac_contributions: float | None = None
+    organized_committee_contributions: float | None = None
+    transfer_contributions: float | None = None
+    other_receipts: float | None = None
     constituent_share: float | None = None
-    in_state_share_basis_amount: float = 0.0
+    in_state_share_basis_amount: float | None = None
     in_state_share_label: str | None = None
     pac_share: float | None = None
     itemized_share: float | None = None
@@ -170,7 +183,7 @@ class PromiseTopicScore(BaseModel):
 
 
 class DeliveryScore(BaseModel):
-    overall_score: int = 0
+    overall_score: int | None = None
     label: str = "Insufficient data"
     explanation: str = ""
     topic_scores: list[PromiseTopicScore] = Field(default_factory=list)
@@ -183,4 +196,5 @@ class OfficialDetail(BaseModel):
     finance: FinanceSummary
     promises: list[PromiseItem]
     delivery_score: DeliveryScore
+    data_readiness: Readiness = "seeded"
     methodology_notes: list[str] = Field(default_factory=list)

@@ -5,9 +5,56 @@ from app.models import ActivitySummary, BillRecord, DeliveryScore, FinanceSummar
 from app.routers import api, pages
 
 
-def _detail_fixture() -> OfficialDetail:
+def _seeded_detail_fixture() -> OfficialDetail:
     return OfficialDetail(
-        member={"bioguideId": "B001299"},
+        member={"bioguideId": "A000370", "directOrderName": "Adams, Alma S."},
+        card=OfficialCard(
+            bioguide_id="A000370",
+            name="Adams, Alma S.",
+            chamber="House of Representatives",
+            state="North Carolina",
+            district=12,
+            party="Democratic",
+            truth_verdict=None,
+            truth_badge_variant=None,
+            efficiency_score=None,
+            delivery_score=None,
+            keeps_promises_score=None,
+            last_refreshed_at="2026-03-25T12:00:00+00:00",
+            data_readiness="seeded",
+            finance_status="pending",
+            activity_status="seeded",
+            promises_status="pending",
+            finance_available=False,
+        ),
+        activity=ActivitySummary(
+            status="seeded",
+            notes=[
+                "This quick view uses cached counts while detailed bill activity is still loading.",
+            ],
+        ),
+        finance=FinanceSummary(
+            status="pending",
+            available=False,
+            warning="Showing cached directory finance while detailed finance loads.",
+            total_raised=None,
+            cash_on_hand=None,
+            notes=["Directory-level finance cache is being shown because a live FEC refresh was unavailable."],
+        ),
+        promises=[],
+        delivery_score=DeliveryScore(
+            overall_score=None,
+            label="Insufficient data",
+            explanation="The score becomes meaningful after the dashboard has both issue priorities and recent legislative activity.",
+        ),
+        data_readiness="seeded",
+        methodology_notes=[],
+    )
+
+
+def _enriched_detail_fixture() -> OfficialDetail:
+    return OfficialDetail(
+        member={"bioguideId": "B001299", "directOrderName": "Jim Banks"},
         card=OfficialCard(
             bioguide_id="B001299",
             name="Jim Banks",
@@ -24,8 +71,13 @@ def _detail_fixture() -> OfficialDetail:
             last_refreshed_at="2026-03-25T12:00:00+00:00",
             top_donor_names=["WEISS, CHARLES BRADFORD"],
             finance_available=True,
+            data_readiness="enriched",
+            finance_status="enriched",
+            activity_status="enriched",
+            promises_status="enriched",
         ),
         activity=ActivitySummary(
+            status="enriched",
             sponsored_count_total=12,
             cosponsored_count_total=21,
             recent_bills=[
@@ -43,6 +95,7 @@ def _detail_fixture() -> OfficialDetail:
             ],
         ),
         finance=FinanceSummary(
+            status="enriched",
             available=True,
             total_raised=1256090.52,
             cash_on_hand=1088676.5,
@@ -73,6 +126,7 @@ def _detail_fixture() -> OfficialDetail:
             label="Early or uneven",
             explanation="This index averages weighted follow-through across stated priorities.",
         ),
+        data_readiness="enriched",
         methodology_notes=[],
     )
 
@@ -84,61 +138,91 @@ def test_healthz():
     assert response.json()["status"] == "ok"
 
 
-def test_dashboard_html_shows_new_score_labels(monkeypatch):
-    card = OfficialCard(
-        bioguide_id="B001314",
-        name="Aaron Bean",
-        chamber="House of Representatives",
-        state="Florida",
-        district=4,
-        party="Republican",
-        total_raised=1256090.52,
-        efficiency_score=59,
-        delivery_score=34,
-        keeps_promises_score=50,
-        truth_verdict="Mixed",
-        truth_badge_variant="mixed",
-        last_refreshed_at="2026-03-25T12:00:00+00:00",
-        top_donor_names=["WEISS, CHARLES BRADFORD"],
-        finance_available=True,
-    )
-    monkeypatch.setattr(pages.service, "list_officials", lambda *args, **kwargs: [card])
-    monkeypatch.setattr(pages.service, "warm_directory_cards", lambda cards, force_refresh=False: cards)
-
+def test_cover_page_renders_ctas():
     client = TestClient(app)
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Is your representative really working for you?" in response.text
-    assert "Delivery index" in response.text
-    assert "Mixed" in response.text
-    assert "Keeps promises index 50" not in response.text
+    assert "Follow the money. Check the work." in response.text
+    assert "Explore officeholders" in response.text
+    assert "Learn the basics" in response.text
 
 
-def test_official_detail_html_renders_explainers_and_impact_summary(monkeypatch):
-    monkeypatch.setattr(pages.service, "get_official_detail", lambda *args, **kwargs: _detail_fixture())
+def test_officeholders_page_uses_collapsible_score_guide(monkeypatch):
+    card = OfficialCard(
+        bioguide_id="A000370",
+        name="Adams, Alma S.",
+        chamber="House of Representatives",
+        state="North Carolina",
+        district=12,
+        party="Democratic",
+        truth_verdict=None,
+        truth_badge_variant=None,
+        efficiency_score=None,
+        delivery_score=None,
+        data_readiness="seeded",
+        finance_status="pending",
+        activity_status="seeded",
+        promises_status="pending",
+    )
+    monkeypatch.setattr(pages.service, "list_officials", lambda *args, **kwargs: [card])
+
+    client = TestClient(app)
+    response = client.get("/officeholders")
+
+    assert response.status_code == 200
+    assert "Search the people in office" in response.text
+    assert "<details" in response.text
+    assert "Needs more data" in response.text
+    assert "Finance pending" in response.text
+
+
+def test_definitions_page_renders_beginner_terms():
+    client = TestClient(app)
+    response = client.get("/definitions")
+
+    assert response.status_code == 200
+    assert "Truth verdict" in response.text
+    assert "Home-state donor share" in response.text
+    assert "Future news module" in response.text
+
+
+def test_seeded_profile_does_not_render_fake_verdict_or_zero_finance(monkeypatch):
+    monkeypatch.setattr(pages.service, "get_official_detail", lambda *args, **kwargs: _seeded_detail_fixture())
+
+    client = TestClient(app)
+    response = client.get("/officials/A000370")
+
+    assert response.status_code == 200
+    assert "Needs more data" in response.text
+    assert "This profile was seeded for quick site launch." in response.text
+    assert "Misleading" not in response.text
+    assert "$0" not in response.text
+
+
+def test_enriched_profile_renders_bill_summary_and_formula(monkeypatch):
+    monkeypatch.setattr(pages.service, "get_official_detail", lambda *args, **kwargs: _enriched_detail_fixture())
 
     client = TestClient(app)
     response = client.get("/officials/B001299")
 
     assert response.status_code == 200
-    assert "Truth verdict" in response.text
-    assert "Efficiency metric" in response.text
-    assert "Delivery index" in response.text
     assert "Formula: 60% promise coverage + 40% delivery quality." in response.text
     assert "Campaign platform" in response.text
     assert "Changes taxes for local families and employers." in response.text
     assert "$1,088,676" in response.text
 
 
-def test_api_official_detail_returns_mocked_payload(monkeypatch):
-    monkeypatch.setattr(api.service, "get_official_detail", lambda *args, **kwargs: _detail_fixture())
+def test_api_official_detail_exposes_readiness_and_nullable_verdict(monkeypatch):
+    monkeypatch.setattr(api.service, "get_official_detail", lambda *args, **kwargs: _seeded_detail_fixture())
 
     client = TestClient(app)
-    response = client.get("/api/officials/B001299")
+    response = client.get("/api/officials/A000370")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["card"]["delivery_score"] == 34
-    assert payload["card"]["keeps_promises_score"] == 50
-    assert payload["card"]["truth_verdict"] == "Mixed"
+    assert payload["data_readiness"] == "seeded"
+    assert payload["card"]["truth_verdict"] is None
+    assert payload["card"]["delivery_score"] is None
+    assert payload["finance"]["total_raised"] is None
+    assert payload["delivery_score"]["overall_score"] is None

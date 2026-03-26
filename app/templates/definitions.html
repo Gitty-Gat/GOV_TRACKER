@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Definitions · Civic Ledger{% endblock %}
+{% block content %}
+  <section class="cover-shell">
+    <div class="cover-nav">
+      <a class="cover-link" href="{{ request.url_for('home') }}">Cover</a>
+      <a class="cover-link" href="{{ request.url_for('officeholders') }}">Officeholders</a>
+    </div>
+
+    <div class="cover-panel slim">
+      <p class="eyebrow">Definitions</p>
+      <h1>Learn the basics before you dive in</h1>
+      <p class="lede">
+        These short definitions explain the terms you will see on the cards and profile pages.
+      </p>
+    </div>
+
+    <div class="definitions-grid">
+      {% for item in definitions %}
+        <article class="list-card definition-card">
+          <strong>{{ item.term }}</strong>
+          <p>{{ item.body }}</p>
+        </article>
+      {% endfor %}
+    </div>
+
+    <section class="panel">
+      <p class="eyebrow">Future news module</p>
+      <h2>What a later current-events section would look like</h2>
+      <div class="stack-list">
+        {% for note in news_integration_notes %}
+          <div class="list-card">
+            <p>{{ note }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </section>
+{% endblock %}

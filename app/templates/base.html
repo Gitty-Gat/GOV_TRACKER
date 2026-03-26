@@ -11,37 +11,47 @@
     <script defer src="{{ url_for('static', path='app.js') }}"></script>
   </head>
   <body>
-    <div class="page-shell">
-      <aside class="sidebar">
-        <div class="sidebar-top">
-          <a class="brand" href="{{ request.url_for('home') }}">
-            <span class="brand-mark">CL</span>
-            <span class="brand-copy">
-              <strong>Civic Ledger</strong>
-              <small>House + Senate dashboard</small>
-            </span>
-          </a>
-          <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-expanded="true" aria-label="Toggle sidebar">
-            <span>Hide</span>
-          </button>
-        </div>
-        <div class="sidebar-panel">
-          <p class="eyebrow">Method</p>
-          <h2>Follow the money. Check the work.</h2>
-          <p>
-            See funding, donors, recent bill work, and plain-language scorecards.
-          </p>
-        </div>
-        <div class="sidebar-panel muted">
-          <p class="eyebrow">Data sources</p>
-          <ul class="sidebar-list">
-            <li>Congress.gov</li>
-            <li>OpenFEC</li>
-            <li>Official member websites</li>
-          </ul>
-        </div>
-      </aside>
-      <main class="content">
+    <div class="page-shell{% if not show_sidebar|default(True) %} no-sidebar{% endif %}">
+      {% if show_sidebar|default(True) %}
+        <aside class="sidebar">
+          <div class="sidebar-top">
+            <a class="brand" href="{{ request.url_for('officeholders') }}">
+              <span class="brand-mark">CL</span>
+              <span class="brand-copy">
+                <strong>Civic Ledger</strong>
+                <small>House + Senate dashboard</small>
+              </span>
+            </a>
+            <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-expanded="true" aria-label="Toggle sidebar">
+              <span>Hide</span>
+            </button>
+          </div>
+          <div class="sidebar-panel">
+            <p class="eyebrow">Method</p>
+            <h2>Follow the money. Check the work.</h2>
+            <p>
+              See funding, donors, recent bill work, and plain-language scorecards.
+            </p>
+          </div>
+          <div class="sidebar-panel muted">
+            <p class="eyebrow">Quick links</p>
+            <ul class="sidebar-list">
+              <li><a href="{{ request.url_for('home') }}">Cover page</a></li>
+              <li><a href="{{ request.url_for('officeholders') }}">Officeholders</a></li>
+              <li><a href="{{ request.url_for('definitions') }}">Definitions</a></li>
+            </ul>
+          </div>
+          <div class="sidebar-panel muted">
+            <p class="eyebrow">Data sources</p>
+            <ul class="sidebar-list">
+              <li>Congress.gov</li>
+              <li>OpenFEC</li>
+              <li>Official member websites</li>
+            </ul>
+          </div>
+        </aside>
+      {% endif %}
+      <main class="content{% if not show_sidebar|default(True) %} content-plain{% endif %}">
         {% block content %}{% endblock %}
       </main>
     </div>

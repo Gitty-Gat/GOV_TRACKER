@@ -107,3 +107,10 @@ def test_truth_verdict_and_evidence_labels():
     assert annotated[0].evidence_label == "Campaign platform"
     assert verdict == "Mixed"
     assert variant == "mixed"
+
+
+def test_delivery_score_is_nullable_when_inputs_are_missing():
+    score = compute_delivery_score([], ActivitySummary())
+
+    assert score.overall_score is None
+    assert score.label == "Insufficient data"
