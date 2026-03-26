@@ -52,6 +52,25 @@ class DashboardService:
         payloads = self.db.list_official_payloads()
         if limit:
             payloads = payloads[:limit]
+
+        for payload in payloads:
+            bioguide_id = payload["bioguide_id"]
+            try:
+                cached_member = self.congress.load_cached_member_detail(bioguide_id)
+                needs_enriched_member = force or not cached_member or cached_member.get("detailReadiness") != "enriched"
+                if needs_enriched_member:
+                    try:
+                        self.congress.get_member_detail(bioguide_id, force=True)
+                    except Exception:
+                        self.congress.ensure_member_detail_snapshot(bioguide_id)
+            except Exception:
+                continue
+
+        try:
+            self.fec.sync_directory_finance_metrics(force=force)
+        except Exception:
+            pass
+
         for payload in payloads:
             bioguide_id = payload["bioguide_id"]
             try:
@@ -60,7 +79,10 @@ class DashboardService:
                     processed += 1
                     continue
 
-                member = self.congress.ensure_member_detail_snapshot(bioguide_id)
+                cached_member = self.congress.load_cached_member_detail(bioguide_id)
+                member = cached_member
+                if not member:
+                    member = self.congress.ensure_member_detail_snapshot(bioguide_id)
                 card = self.db.get_official_card(bioguide_id)
                 if not member or not card:
                     failed += 1

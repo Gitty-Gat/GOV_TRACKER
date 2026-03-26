@@ -361,12 +361,15 @@
         <h2>Recent bills and actions</h2>
       </div>
     </div>
-    {% if detail.activity.status == "enriched" %}
+    {% if detail.activity.status in ["partial", "enriched"] %}
       <div class="activity-summary">
         <span>Sponsored bills: {{ detail.activity.sponsored_count_total }}</span>
         <span>Cosponsored bills: {{ detail.activity.cosponsored_count_total }}</span>
         <span>Advanced or enacted in sample: {{ detail.activity.passed_count + detail.activity.enacted_count }}</span>
       </div>
+      {% if detail.activity.status != "enriched" %}
+        <p class="tiny-note">These bill counts come from Congress member detail. The recent bill list is still being enriched.</p>
+      {% endif %}
     {% else %}
       <p class="callout">Legislative detail is still pending for this profile.</p>
     {% endif %}

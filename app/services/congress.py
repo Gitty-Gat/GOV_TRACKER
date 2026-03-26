@@ -170,10 +170,13 @@ class CongressService:
         ]
         if note:
             notes.append(note)
+        sponsored_count = (member.get("sponsoredLegislation") or {}).get("count") or 0
+        cosponsored_count = (member.get("cosponsoredLegislation") or {}).get("count") or 0
+        status = "partial" if member.get("detailReadiness") == "enriched" or sponsored_count or cosponsored_count else "seeded"
         return ActivitySummary(
-            status="seeded",
-            sponsored_count_total=(member.get("sponsoredLegislation") or {}).get("count") or 0,
-            cosponsored_count_total=(member.get("cosponsoredLegislation") or {}).get("count") or 0,
+            status=status,
+            sponsored_count_total=sponsored_count,
+            cosponsored_count_total=cosponsored_count,
             notes=notes,
         )
 
