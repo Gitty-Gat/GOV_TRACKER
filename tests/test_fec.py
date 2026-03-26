@@ -164,3 +164,63 @@ def test_partial_finance_summary_prefers_directory_metric_over_failed_cache(tmp_
     assert summary.cash_on_hand == 1088676.5
     assert summary.top_donors[0].name == "WEISS, CHARLES BRADFORD"
     assert "failed" in (summary.warning or "").lower() or "directory finance" in (summary.warning or "").lower()
+
+
+def test_request_json_retries_after_rate_limit(tmp_path, monkeypatch):
+    db = Database(str(tmp_path / "test.db"))
+    service = FECService(db)
+    calls = {"count": 0}
+
+    class FakeResponse:
+        def __init__(self, status_code, payload, headers=None):
+            self.status_code = status_code
+            self._payload = payload
+            self.headers = headers or {}
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                from requests import HTTPError
+
+                raise HTTPError(f"{self.status_code} error")
+
+        def json(self):
+            return self._payload
+
+    def fake_get(url, params, timeout):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return FakeResponse(429, {}, {"Retry-After": "0"})
+        return FakeResponse(200, {"results": [{"candidate_id": "H0TX00123"}]})
+
+    monkeypatch.setattr("app.services.fec.requests.get", fake_get)
+    monkeypatch.setattr("app.services.fec.time.sleep", lambda seconds: None)
+
+    payload = service._request_json("/candidates/search/", {"q": "Arrington"})
+
+    assert calls["count"] == 2
+    assert payload["results"][0]["candidate_id"] == "H0TX00123"
+
+
+def test_match_candidate_falls_back_when_active_filter_returns_no_results(tmp_path, monkeypatch):
+    db = Database(str(tmp_path / "test.db"))
+    service = FECService(db)
+    member = {
+        "bioguideId": "B001298",
+        "firstName": "Don",
+        "lastName": "Bacon",
+        "district": 2,
+        "terms": [{"chamber": "House of Representatives", "stateCode": "NE"}],
+    }
+
+    def fake_request_json(path, params):
+        assert path == "/candidates/search/"
+        if params.get("is_active_candidate") == "true":
+            return {"results": []}
+        return {"results": [{"candidate_id": "H6NE02167", "name": "BACON, DONALD J", "office": "H", "state": "NE", "district": "02"}]}
+
+    monkeypatch.setattr(service, "_request_json", fake_request_json)
+
+    candidate = service._match_candidate(member)
+
+    assert candidate is not None
+    assert candidate["candidate_id"] == "H6NE02167"

@@ -51,7 +51,11 @@ class PromiseService:
         if not force:
             return []
 
-        inferred = annotate_promise_evidence(self._infer_from_official_site(member.get("officialWebsiteUrl")))
+        official_site = member.get("officialWebsiteUrl")
+        if not official_site:
+            stored = self.db.get_official_payload(bioguide_id)
+            official_site = stored.get("website_url") if stored else None
+        inferred = annotate_promise_evidence(self._infer_from_official_site(official_site))
         self.db.save_snapshot("promises", bioguide_id, {"items": [item.model_dump(mode="json") for item in inferred]})
         return inferred
 

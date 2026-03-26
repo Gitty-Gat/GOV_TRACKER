@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import re
+import time
 from typing import Any
 
 import requests
@@ -187,7 +188,81 @@ class FECService:
                     break
                 page += 1
 
+        for official in officials:
+            bioguide_id = official["bioguide_id"]
+            metric = self._load_directory_metric(bioguide_id)
+            needs_backfill = (
+                force
+                or not metric
+                or metric.total_raised is None
+                or metric.cash_on_hand is None
+                or not metric.top_donor_names
+            )
+            if not needs_backfill:
+                continue
+            member = self.db.load_snapshot("member_detail", bioguide_id)
+            member_payload = member[0] if member else {
+                "bioguideId": bioguide_id,
+                "firstName": official.get("first_name"),
+                "lastName": official.get("last_name"),
+                "district": official.get("district"),
+                "state": official.get("state"),
+                "officialWebsiteUrl": official.get("website_url"),
+                "terms": official.get("terms"),
+            }
+            try:
+                self.ensure_directory_finance_metric(member_payload, force=force, include_donor_names=True)
+            except requests.RequestException:
+                continue
+
         self.db.set_meta(meta_key, datetime.now(timezone.utc).replace(microsecond=0).isoformat())
+
+    def ensure_directory_finance_metric(
+        self,
+        member: dict[str, Any],
+        force: bool = False,
+        include_donor_names: bool = True,
+    ) -> DirectoryMetric:
+        bioguide_id = member["bioguideId"]
+        metric = self._load_directory_metric(bioguide_id) or DirectoryMetric()
+        needs_totals = force or metric.total_raised is None or metric.cash_on_hand is None or not metric.candidate_id
+        needs_donors = include_donor_names and (force or not metric.top_donor_names)
+
+        candidate: dict[str, Any] | None = None
+        if needs_totals or needs_donors or not metric.principal_committee_id:
+            candidate = self._match_candidate(member)
+            if candidate:
+                metric.candidate_id = candidate.get("candidate_id")
+                principal = next(
+                    (committee for committee in candidate.get("principal_committees", []) if committee.get("designation") == "P"),
+                    (candidate.get("principal_committees") or [{}])[0],
+                )
+                metric.principal_committee_id = principal.get("committee_id") or metric.principal_committee_id
+
+        if needs_totals and metric.candidate_id:
+            totals_payload = self._request_json(f"/candidate/{metric.candidate_id}/totals/", {"cycle": self.settings.default_cycle})
+            totals = (totals_payload.get("results") or [{}])[0]
+            total_raised = float(totals.get("receipts") or totals.get("contributions") or 0)
+            pac_component = float(totals.get("other_political_committee_contributions") or 0) + float(
+                totals.get("political_party_committee_contributions") or 0
+            )
+            metric.finance_available = True
+            metric.total_raised = total_raised
+            metric.cash_on_hand = float(totals.get("last_cash_on_hand_end_period") or 0)
+            metric.pac_share = round(pac_component / total_raised, 3) if total_raised else None
+
+        if needs_donors and metric.principal_committee_id:
+            donors = self._safe_top_donors(metric.principal_committee_id, individual_only=False)
+            unique_names: list[str] = []
+            for donor in donors:
+                if donor.name not in unique_names:
+                    unique_names.append(donor.name)
+                if len(unique_names) == 3:
+                    break
+            metric.top_donor_names = unique_names
+
+        self.db.save_snapshot("directory_metric", bioguide_id, metric.model_dump(mode="json"))
+        return metric
 
     def ensure_card_finance_summary(
         self,
@@ -298,22 +373,29 @@ class FECService:
         queries = _candidate_queries(member)
         results: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
-        for query in queries:
-            payload = self._request_json(
-                "/candidates/search/",
-                {
-                    "q": query,
-                    "office": office,
-                    "state": state_code,
-                    "per_page": 8,
-                    "is_active_candidate": "true",
-                },
-            )
-            for candidate in payload.get("results", []):
-                candidate_id = candidate.get("candidate_id")
-                if candidate_id and candidate_id not in seen_ids:
-                    seen_ids.add(candidate_id)
-                    results.append(candidate)
+        search_variants = (
+            {"is_active_candidate": "true"},
+            {},
+        )
+        for variant in search_variants:
+            for query in queries:
+                payload = self._request_json(
+                    "/candidates/search/",
+                    {
+                        "q": query,
+                        "office": office,
+                        "state": state_code,
+                        "per_page": 8,
+                        **variant,
+                    },
+                )
+                for candidate in payload.get("results", []):
+                    candidate_id = candidate.get("candidate_id")
+                    if candidate_id and candidate_id not in seen_ids:
+                        seen_ids.add(candidate_id)
+                        results.append(candidate)
+                if results:
+                    break
             if results:
                 break
         chosen = _pick_best_candidate(member, results)
@@ -508,11 +590,20 @@ class FECService:
     def _request_json(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         request_params = dict(params)
         request_params["api_key"] = self.settings.fec_api_key
-        response = requests.get(
-            f"{self.BASE_URL}{path}",
-            params=request_params,
-            timeout=min(self.settings.request_timeout_seconds, 12),
-        )
+        response = None
+        for attempt in range(5):
+            response = requests.get(
+                f"{self.BASE_URL}{path}",
+                params=request_params,
+                timeout=min(self.settings.request_timeout_seconds, 12),
+            )
+            if response.status_code != 429:
+                response.raise_for_status()
+                return response.json()
+            retry_after = response.headers.get("Retry-After")
+            sleep_seconds = int(float(retry_after)) if retry_after else min(30, 4 * (attempt + 1))
+            time.sleep(max(1, sleep_seconds))
+        assert response is not None
         response.raise_for_status()
         return response.json()
 

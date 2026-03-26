@@ -139,6 +139,52 @@ class DashboardService:
         self.db.set_meta("precomputed_refresh_at", utc_now_iso())
         return {"processed": processed, "failed": failed}
 
+    def refresh_read_model(
+        self,
+        limit: int | None = None,
+        force: bool = False,
+        refresh_promises: bool = False,
+    ) -> dict[str, int]:
+        self.congress.ensure_current_members(force=force)
+        payloads = self.db.list_official_payloads()
+        if limit:
+            payloads = payloads[:limit]
+
+        for payload in payloads:
+            bioguide_id = payload["bioguide_id"]
+            try:
+                cached_member = self.congress.load_cached_member_detail(bioguide_id)
+                if force or not cached_member or cached_member.get("detailReadiness") != "enriched":
+                    try:
+                        self.congress.get_member_detail(bioguide_id, force=True)
+                    except Exception:
+                        self.congress.ensure_member_detail_snapshot(bioguide_id)
+            except Exception:
+                continue
+
+        processed = 0
+        failed = 0
+        for payload in payloads:
+            bioguide_id = payload["bioguide_id"]
+            try:
+                member = self.congress.load_cached_member_detail(bioguide_id) or self.congress.ensure_member_detail_snapshot(bioguide_id)
+                card = self.db.get_official_card(bioguide_id)
+                if not member or not card:
+                    failed += 1
+                    continue
+
+                activity = self.congress.build_activity_snapshot(bioguide_id, force=force)
+                promises = self.promises.get_promises(member, force=refresh_promises) if refresh_promises else (self.promises.load_cached_promises(bioguide_id) or self.promises.get_promises(member, force=False))
+                self.fec.ensure_directory_finance_metric(member, force=force, include_donor_names=True)
+                finance = self.fec.load_cached_finance_snapshot(bioguide_id) or self.fec._partial_finance_summary(member, "")
+                self._store_detail_snapshot(card, member, activity, promises or [], finance, persist=True)
+                processed += 1
+            except Exception:
+                failed += 1
+
+        self.db.set_meta("read_model_refresh_at", utc_now_iso())
+        return {"processed": processed, "failed": failed}
+
     def sync_directory_efficiency_metrics(
         self,
         force_refresh: bool = False,
