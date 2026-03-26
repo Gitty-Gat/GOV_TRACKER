@@ -15,7 +15,7 @@ from app.settings import Settings
 
 SERVICE_NAME = "civic-ledger"
 HEALTH_PATH = "/healthz"
-BUILD_COMMAND = "pip install -r requirements.txt && (python scripts/bootstrap_precomputed_data.py || true)"
+BUILD_COMMAND = "pip install -r requirements.txt"
 START_COMMAND = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 

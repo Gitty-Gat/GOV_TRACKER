@@ -98,13 +98,19 @@ Render is the primary host for this app.
 .venv\Scripts\python scripts\deploy_render.py
 ```
 
-The deployment script creates a `civic-ledger` web service if it does not exist, or triggers a new deploy if it already exists. During build it seeds baseline officeholder snapshots with:
+The deployment script creates a `civic-ledger` web service if it does not exist, or triggers a new deploy if it already exists. The Render build now only installs dependencies so deploys stay fast:
 
 ```bash
-python scripts/bootstrap_precomputed_data.py || true
+pip install -r requirements.txt
 ```
 
 The service uses `/healthz` as its health check.
+
+Use the bootstrap script outside the web-service build when you need to seed a new database:
+
+```powershell
+python scripts\bootstrap_precomputed_data.py
+```
 
 ### Scheduled refresh
 
