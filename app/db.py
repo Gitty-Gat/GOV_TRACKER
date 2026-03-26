@@ -28,6 +28,7 @@ class Database:
         self.database_url = settings.database_url
         self.backend = "postgres" if self.database_url and not self.database_url.startswith("sqlite") else "sqlite"
         self.database_path = Path(database_path or settings.database_path)
+        self._persistent_connection: Any | None = None
         if self.backend == "sqlite":
             self.database_path.parent.mkdir(parents=True, exist_ok=True)
         elif psycopg is None:
@@ -36,18 +37,42 @@ class Database:
 
     @contextmanager
     def connect(self) -> Iterator[Any]:
-        if self.backend == "postgres":
-            connection = psycopg.connect(self.database_url, row_factory=dict_row)
-        else:
-            connection = sqlite3.connect(self.database_path, timeout=30)
-            connection.row_factory = sqlite3.Row
-            connection.execute("PRAGMA journal_mode=WAL")
-            connection.execute("PRAGMA busy_timeout = 30000")
+        if self._persistent_connection is not None:
+            connection = self._persistent_connection
+            try:
+                yield connection
+                connection.commit()
+            finally:
+                return
+        connection = self._open_connection()
         try:
             yield connection
             connection.commit()
         finally:
             connection.close()
+
+    @contextmanager
+    def persistent_connection(self) -> Iterator[None]:
+        if self._persistent_connection is not None:
+            yield
+            return
+        connection = self._open_connection()
+        self._persistent_connection = connection
+        try:
+            yield
+        finally:
+            connection.commit()
+            connection.close()
+            self._persistent_connection = None
+
+    def _open_connection(self) -> Any:
+        if self.backend == "postgres":
+            return psycopg.connect(self.database_url, row_factory=dict_row)
+        connection = sqlite3.connect(self.database_path, timeout=30)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("PRAGMA busy_timeout = 30000")
+        return connection
 
     def _ensure_schema(self) -> None:
         with self.connect() as connection:

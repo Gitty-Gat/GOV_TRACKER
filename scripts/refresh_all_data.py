@@ -20,7 +20,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     service = DashboardService()
-    results = service.refresh_all_precomputed_data(limit=args.limit)
+    with service.db.persistent_connection():
+        results = service.refresh_all_precomputed_data(limit=args.limit)
     print(
         "Precomputed refresh completed. "
         f"Processed={results['processed']} Failed={results['failed']}"

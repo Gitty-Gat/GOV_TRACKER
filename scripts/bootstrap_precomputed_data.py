@@ -21,7 +21,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     service = DashboardService()
-    results = service.seed_baseline_data(force=args.force, limit=args.limit)
+    with service.db.persistent_connection():
+        results = service.seed_baseline_data(force=args.force, limit=args.limit)
     print(
         "Baseline bootstrap completed. "
         f"Processed={results['processed']} Failed={results['failed']}"
