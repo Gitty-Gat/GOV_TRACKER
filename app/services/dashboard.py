@@ -46,10 +46,6 @@ class DashboardService:
 
     def seed_baseline_data(self, force: bool = False, limit: int | None = None) -> dict[str, int]:
         self.congress.ensure_current_members(force=force)
-        try:
-            self.fec.sync_directory_finance_metrics(force=force)
-        except Exception:
-            pass
 
         processed = 0
         failed = 0
