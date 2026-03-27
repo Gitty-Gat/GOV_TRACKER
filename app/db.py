@@ -173,7 +173,7 @@ class Database:
                     party = excluded.party,
                     image_url = excluded.image_url,
                     image_fallback_url = excluded.image_fallback_url,
-                    website_url = excluded.website_url,
+                    website_url = COALESCE(excluded.website_url, officials.website_url),
                     payload = excluded.payload,
                     updated_at = excluded.updated_at
                 """,

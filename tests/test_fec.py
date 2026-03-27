@@ -157,13 +157,63 @@ def test_partial_finance_summary_prefers_directory_metric_over_failed_cache(tmp_
             top_donor_names=["WEISS, CHARLES BRADFORD"],
         ).model_dump(mode="json"),
     )
+    service._build_snapshot = lambda member_payload: FinanceSummary(  # type: ignore[method-assign]
+        status="enriched",
+        available=True,
+        candidate_id="H2FL04211",
+        principal_committee_id="C00816983",
+        total_raised=1256090.52,
+        cash_on_hand=1088676.5,
+        top_donors=[{"name": "WEISS, CHARLES BRADFORD", "amount": 1000, "donor_type": "Individual"}],
+    )
 
     summary = service.build_finance_snapshot(member, force=False)
 
     assert summary.total_raised == 1256090.52
     assert summary.cash_on_hand == 1088676.5
     assert summary.top_donors[0].name == "WEISS, CHARLES BRADFORD"
-    assert "failed" in (summary.warning or "").lower() or "directory finance" in (summary.warning or "").lower()
+    assert summary.status in {"partial", "enriched"}
+
+
+def test_build_finance_snapshot_attempts_live_enrichment_when_only_directory_metric_exists(tmp_path, monkeypatch):
+    db = Database(str(tmp_path / "test.db"))
+    service = FECService(db)
+    member = {"bioguideId": "B001314"}
+
+    db.save_snapshot(
+        "directory_metric",
+        "B001314",
+        DirectoryMetric(
+            finance_available=True,
+            candidate_id="H2FL04211",
+            principal_committee_id="C00816983",
+            total_raised=1256090.52,
+            cash_on_hand=1088676.5,
+        ).model_dump(mode="json"),
+    )
+    monkeypatch.setattr(
+        service,
+        "_build_snapshot",
+        lambda member_payload: FinanceSummary(
+            status="enriched",
+            available=True,
+            candidate_id="H2FL04211",
+            principal_committee_id="C00816983",
+            total_raised=1256090.52,
+            cash_on_hand=1088676.5,
+            individual_contributions=476035.2,
+            organized_committee_contributions=703150.0,
+            transfer_contributions=62992.86,
+            other_receipts=3912.46,
+        ),
+    )
+
+    summary = service.build_finance_snapshot(member, force=False)
+    cached = service.load_cached_finance_snapshot("B001314")
+
+    assert summary.status == "enriched"
+    assert cached is not None
+    assert cached.status == "enriched"
 
 
 def test_request_json_retries_after_rate_limit(tmp_path, monkeypatch):

@@ -79,7 +79,7 @@ class PromiseService:
         try:
             response = requests.get(
                 official_website,
-                timeout=self.settings.request_timeout_seconds,
+                timeout=min(self.settings.request_timeout_seconds, 10),
                 headers={"User-Agent": "CivicLedger/0.1"},
             )
             response.raise_for_status()

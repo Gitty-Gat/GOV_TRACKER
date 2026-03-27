@@ -28,6 +28,7 @@ class CongressService:
             if datetime.now(timezone.utc) - synced_at < timedelta(hours=self.settings.officials_sync_hours):
                 return
 
+        fallback_index = {member["bioguide_id"]: member for member in self._fallback_members()}
         try:
             offset = 0
             while True:
@@ -44,12 +45,16 @@ class CongressService:
                 if not members:
                     break
                 for member in members:
-                    self.db.upsert_official(self._normalize_member_summary(member))
+                    normalized = self._normalize_member_summary(member)
+                    fallback = fallback_index.get(normalized["bioguide_id"])
+                    if fallback and not normalized.get("website_url"):
+                        normalized["website_url"] = fallback.get("website_url")
+                    self.db.upsert_official(normalized)
                 if len(members) < 250:
                     break
                 offset += 250
         except requests.RequestException:
-            for member in self._fallback_members():
+            for member in fallback_index.values():
                 self.db.upsert_official(member)
 
         self.db.set_meta("officials_last_sync", datetime.now(timezone.utc).replace(microsecond=0).isoformat())
@@ -269,6 +274,7 @@ class CongressService:
     def _normalize_member_detail(self, member: dict[str, Any]) -> dict[str, Any]:
         party_history = member.get("partyHistory") or []
         current_party = party_history[-1]["partyName"] if party_history else None
+        stored = self.db.get_official_payload(member["bioguideId"]) or {}
         return {
             "bioguide_id": member["bioguideId"],
             "name": member.get("directOrderName") or member.get("invertedOrderName"),
@@ -278,7 +284,7 @@ class CongressService:
             "party": _normalize_party(current_party),
             "image_url": (member.get("depiction") or {}).get("imageUrl"),
             "image_fallback_url": _bioguide_photo_url(member["bioguideId"]),
-            "website_url": member.get("officialWebsiteUrl"),
+            "website_url": member.get("officialWebsiteUrl") or stored.get("website_url"),
             "first_name": member.get("firstName"),
             "last_name": member.get("lastName"),
             "state_code": (member.get("terms") or [{}])[-1].get("stateCode"),

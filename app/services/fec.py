@@ -23,20 +23,9 @@ class FECService:
     def build_finance_snapshot(self, member: dict[str, Any], force: bool = False) -> FinanceSummary:
         bioguide_id = member["bioguideId"]
         cached = self.load_cached_finance_snapshot(bioguide_id)
-        metric = self._load_directory_metric(bioguide_id)
+        cached_warning = cached.warning if cached else None
         if not force:
-            if cached and cached.available and self._has_consistent_receipt_buckets(cached):
-                return cached
-            if metric:
-                summary = self._partial_finance_summary(member, cached.warning if cached else None)
-                if cached and cached.top_donors and not summary.top_donors:
-                    summary.top_donors = cached.top_donors
-                if cached and cached.top_pac_donors and not summary.top_pac_donors:
-                    summary.top_pac_donors = cached.top_pac_donors
-                if cached and cached.pac_audit_trails and not summary.pac_audit_trails:
-                    summary.pac_audit_trails = cached.pac_audit_trails
-                return summary
-            if cached:
+            if cached and cached.status == "enriched" and cached.available and self._has_consistent_receipt_buckets(cached):
                 return cached
 
         try:
@@ -47,22 +36,55 @@ class FECService:
                 summary.warning = f"Showing cached finance data because the latest refresh failed: {exc}"
             else:
                 summary = self._partial_finance_summary(member, str(exc))
+            if cached and cached.top_donors and not summary.top_donors:
+                summary.top_donors = cached.top_donors
+            if cached and cached.top_pac_donors and not summary.top_pac_donors:
+                summary.top_pac_donors = cached.top_pac_donors
+            if cached and cached.pac_audit_trails and not summary.pac_audit_trails:
+                summary.pac_audit_trails = cached.pac_audit_trails
+            if cached_warning and not summary.warning:
+                summary.warning = cached_warning
 
         self.db.save_snapshot("finance", bioguide_id, summary.model_dump(mode="json"))
         return summary
 
     def _build_snapshot(self, member: dict[str, Any]) -> FinanceSummary:
-        candidate = self._match_candidate(member)
+        metric = self._load_directory_metric(member["bioguideId"])
+        candidate = None
+        if metric and metric.candidate_id:
+            candidate = {"candidate_id": metric.candidate_id, "principal_committees": []}
+        if not candidate:
+            candidate = self._match_candidate(member)
         if not candidate:
             return FinanceSummary(available=False, warning="No active FEC candidate filing was matched for this official.")
 
         totals_payload = self._request_json(f"/candidate/{candidate['candidate_id']}/totals/", {"cycle": self.settings.default_cycle})
         totals = (totals_payload.get("results") or [{}])[0]
+        committee_id = metric.principal_committee_id if metric else None
+        principal_committee_name = None
+        principal_committees = candidate.get("principal_committees") or []
         principal_committee = next(
-            (committee for committee in candidate.get("principal_committees", []) if committee.get("designation") == "P"),
-            (candidate.get("principal_committees") or [{}])[0],
+            (committee for committee in principal_committees if committee.get("designation") == "P"),
+            principal_committees[0] if principal_committees else {},
         )
-        committee_id = principal_committee.get("committee_id")
+        if not committee_id:
+            committee_id = principal_committee.get("committee_id")
+        principal_committee_name = principal_committee.get("name")
+        if committee_id and not principal_committee_name:
+            try:
+                committees_payload = self._request_json(
+                    f"/candidate/{candidate['candidate_id']}/committees/",
+                    {"cycle": self.settings.default_cycle},
+                )
+                committees = committees_payload.get("results", [])
+                principal_committee = next(
+                    (committee for committee in committees if committee.get("designation") == "P"),
+                    committees[0] if committees else {},
+                )
+                committee_id = committee_id or principal_committee.get("committee_id")
+                principal_committee_name = principal_committee.get("name")
+            except requests.RequestException:
+                pass
 
         donor_states = self._safe_state_breakdown(committee_id)
         top_donors = self._safe_top_donors(committee_id, individual_only=True)
@@ -101,7 +123,7 @@ class FECService:
             available=True,
             candidate_id=candidate["candidate_id"],
             principal_committee_id=committee_id,
-            principal_committee_name=principal_committee.get("name"),
+            principal_committee_name=principal_committee_name,
             cycle=self.settings.default_cycle,
             total_raised=total_raised,
             cash_on_hand=float(totals.get("last_cash_on_hand_end_period") or 0),
@@ -428,7 +450,12 @@ class FECService:
         states.sort(key=lambda item: item.amount, reverse=True)
         return states[:8]
 
-    def _safe_top_donors(self, committee_id: str | None, individual_only: bool = False) -> list[DonorRecord]:
+    def _safe_top_donors(
+        self,
+        committee_id: str | None,
+        individual_only: bool = False,
+        include_other_recipients: bool = True,
+    ) -> list[DonorRecord]:
         if not committee_id:
             return []
         params: dict[str, Any] = {
@@ -458,15 +485,16 @@ class FECService:
                     source_url=item.get("pdf_url"),
                 )
             )
-        for donor in donors[:3]:
-            donor.other_recipients = self._safe_other_recipients(donor.name)
+        if include_other_recipients:
+            for donor in donors[:1]:
+                donor.other_recipients = self._safe_other_recipients(donor.name)
         return donors
 
     def _safe_top_pac_donors(self, committee_id: str | None) -> list[DonorRecord]:
         if not committee_id:
             return []
         grouped: dict[tuple[str, str], dict[str, Any]] = defaultdict(lambda: {"amount": 0.0, "donor_type": "Committee/PAC"})
-        for item in self._safe_committee_receipts(committee_id, max_pages=2):
+        for item in self._safe_committee_receipts(committee_id, max_pages=1):
             if item.get("is_individual"):
                 continue
             contributor = item.get("contributor") or {}
@@ -493,7 +521,7 @@ class FECService:
 
     def _safe_pac_audit_trails(self, donors: list[DonorRecord]) -> list[PacAuditTrail]:
         trails: list[PacAuditTrail] = []
-        for donor in donors[:3]:
+        for donor in donors[:2]:
             committee_id = donor.contributor_id
             if not committee_id:
                 continue
@@ -502,7 +530,7 @@ class FECService:
                     pac_name=donor.name,
                     pac_committee_id=committee_id,
                     amount_to_official=donor.amount,
-                    inbound_sources=self._safe_top_donors(committee_id)[:4],
+                    inbound_sources=self._safe_top_donors(committee_id, include_other_recipients=False)[:4],
                     outbound_targets=self._safe_committee_disbursements(committee_id),
                 )
             )

@@ -29,4 +29,4 @@ jobs:
         run: python scripts/bootstrap_precomputed_data.py
 
       - name: Refresh live read model
-        run: python scripts/refresh_read_model.py
+        run: python scripts/refresh_read_model.py --refresh-promises

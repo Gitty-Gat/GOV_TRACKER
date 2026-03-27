@@ -1,5 +1,5 @@
 from app.db import Database
-from app.models import ActivitySummary, DeliveryScore, DirectoryMetric, FinanceSummary, OfficialDetail, PromiseItem
+from app.models import ActivitySummary, BillRecord, DeliveryScore, DirectoryMetric, FinanceSummary, OfficialDetail, PromiseItem
 from app.services.dashboard import DashboardService
 
 
@@ -213,3 +213,92 @@ def test_seed_baseline_data_creates_directory_and_detail_snapshots(tmp_path, mon
     assert metric_payload["truth_verdict"] is None
     assert detail_payload["data_readiness"] == "partial"
     assert detail_payload["card"]["truth_verdict"] is None
+
+
+def test_refresh_read_model_enriches_finance_and_promises_when_missing(tmp_path, monkeypatch):
+    db = Database(str(tmp_path / "test.db"))
+    _seed_official(db)
+    db.save_snapshot(
+        "member_detail",
+        "B001314",
+        {
+            "bioguideId": "B001314",
+            "detailReadiness": "enriched",
+            "directOrderName": "Aaron Bean",
+            "firstName": "Aaron",
+            "lastName": "Bean",
+            "state": "Florida",
+            "district": 4,
+            "officialWebsiteUrl": None,
+            "partyHistory": [{"partyName": "Republican"}],
+            "sponsoredLegislation": {"count": 12},
+            "cosponsoredLegislation": {"count": 18},
+            "terms": [{"chamber": "House of Representatives", "stateCode": "FL", "startYear": 2023}],
+        },
+    )
+    service = DashboardService(db)
+
+    monkeypatch.setattr(service.congress, "ensure_current_members", lambda force=False: None)
+    monkeypatch.setattr(
+        service.congress,
+        "build_activity_snapshot",
+        lambda bioguide_id, force=False: ActivitySummary(
+            status="enriched",
+            sponsored_count_total=12,
+            cosponsored_count_total=18,
+            recent_bills=[
+                BillRecord(
+                    title="Expand workforce training",
+                    bill_number="HR 101",
+                    congress=119,
+                    policy_area="Jobs & Economy",
+                    latest_action_text="Passed House",
+                    sponsorship="sponsored",
+                    stage="passed",
+                    stage_weight=8,
+                    impact_summary="Expands workforce training access.",
+                )
+            ],
+        ),
+    )
+    monkeypatch.setattr(service.promises, "load_cached_promises", lambda bioguide_id: [])
+    monkeypatch.setattr(
+        service.promises,
+        "get_promises",
+        lambda member, force=False: [
+            PromiseItem(
+                title="Jobs & Economy",
+                description="Expand workforce training.",
+                topic="Jobs & Economy",
+                source_label="Official website issue language",
+                source_url="https://bean.house.gov",
+                confidence=0.8,
+                evidence_label="Moderate evidence",
+                provenance="inferred",
+            )
+        ],
+    )
+    monkeypatch.setattr(service.fec, "ensure_directory_finance_metric", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        service.fec,
+        "build_finance_snapshot",
+        lambda member, force=False: FinanceSummary(
+            status="enriched",
+            available=True,
+            total_raised=1256090.52,
+            cash_on_hand=1088676.5,
+            individual_contributions=476035.2,
+            organized_committee_contributions=703150.0,
+            transfer_contributions=62992.86,
+            other_receipts=3912.46,
+            pac_audit_trails=[],
+        ),
+    )
+
+    results = service.refresh_read_model(refresh_promises=False)
+    detail_payload, _ = db.load_snapshot("official_detail", "B001314")
+
+    assert results == {"processed": 1, "failed": 0}
+    assert detail_payload["finance"]["status"] == "enriched"
+    assert detail_payload["card"]["truth_verdict"] is not None
+    assert detail_payload["card"]["promises_status"] == "enriched"

@@ -173,10 +173,14 @@ class DashboardService:
                     failed += 1
                     continue
 
-                activity = self.congress.build_activity_snapshot(bioguide_id, force=force)
-                promises = self.promises.get_promises(member, force=refresh_promises) if refresh_promises else (self.promises.load_cached_promises(bioguide_id) or self.promises.get_promises(member, force=False))
+                cached_activity = self.congress.load_cached_activity_snapshot(bioguide_id)
+                activity = cached_activity if cached_activity and cached_activity.status == "enriched" and not force else self.congress.build_activity_snapshot(bioguide_id, force=force)
+                cached_promises = self.promises.load_cached_promises(bioguide_id)
+                promises = cached_promises
+                if refresh_promises or not promises:
+                    promises = self.promises.get_promises(member, force=True)
                 self.fec.ensure_directory_finance_metric(member, force=force, include_donor_names=True)
-                finance = self.fec.load_cached_finance_snapshot(bioguide_id) or self.fec._partial_finance_summary(member, "")
+                finance = self.fec.build_finance_snapshot(member, force=force)
                 self._store_detail_snapshot(card, member, activity, promises or [], finance, persist=True)
                 processed += 1
             except Exception:
