@@ -37,6 +37,7 @@ Recent commits show steady product movement rather than churn:
 - `86a257a` — backfill finance and activity in the read model
 - `d85954f` — restore profile finance and verdict sections
 - `69bad6b` — add chairman stand-up completion plan
+- `35a8e32` — add project status board (local commit; not yet on origin/main)
 
 ## This block shipped
 - Added a durable status board so project state no longer lives only in commit history.
@@ -66,6 +67,7 @@ Recent commits show steady product movement rather than churn:
 - **Operations visibility risk:** refresh logic exists, but operator guidance is not yet centralized.
 - **Freshness trust risk:** stale or partial data behavior is implemented in code, but not yet documented as an explicit operational expectation.
 - **Project hygiene risk:** without roadmap/decision docs, future stand-ups still require too much archaeology.
+- **Git push blocker:** `git push origin main` failed on 2026-04-08 with `git@github.com: Permission denied (publickey)`. Local commits are ahead of `origin/main` until SSH credentials are fixed on the execution host.
 
 ## Recommended next 30-minute slice
 Add `docs/project-plan/ROADMAP.md` with:
