@@ -37,7 +37,8 @@ Recent commits show steady product movement rather than churn:
 - `86a257a` — backfill finance and activity in the read model
 - `d85954f` — restore profile finance and verdict sections
 - `69bad6b` — add chairman stand-up completion plan
-- `35a8e32` — add project status board (local commit; not yet on origin/main)
+- `35a8e32` — add project status board
+- `2c1c25c` — add operations runbook and link it from the repo front door
 
 ## This block shipped
 - Added a durable status board so project state no longer lives only in commit history.
@@ -56,7 +57,6 @@ Recent commits show steady product movement rather than churn:
 ## Gaps blocking “MVP done”
 1. Verification is still spread across README text, scripts, tests, and workflow files instead of one explicit matrix.
 2. Launch acceptance criteria are still implicit.
-3. Push/auth remains blocked on the execution host, so governance updates are landing locally before they can reach `origin/main`.
 
 ## Active slice tracker
 - [x] Add `docs/project-plan/STATUS_BOARD.md`.
@@ -69,7 +69,6 @@ Recent commits show steady product movement rather than churn:
 ## Current risks / blockers
 - **Verification sprawl risk:** tests, scripts, workflow steps, and README notes still need one explicit verification surface before governance feels complete.
 - **Freshness trust risk:** the repo now documents stale and partial data behavior, but operators still need a short executable check set to validate health quickly.
-- **Git push blocker:** `git push origin main` failed again on 2026-04-08 with `git@github.com: Permission denied (publickey)`. Local commits including `35a8e32`, `bc5f9af`, `1fc2ad9`, and `4c2bf5b` remain ahead of `origin/main` until SSH credentials are fixed on the execution host.
 
 ## Recommended next 30-minute slice
 Add a verification matrix covering:

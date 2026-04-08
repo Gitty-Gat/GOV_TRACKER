@@ -71,6 +71,7 @@ Push narrow, reviewable changes often. If a block reveals a blocker instead of s
 - 2026-04-08 08:40 America/Chicago — Completed slice 3 by adding `docs/project-plan/DECISIONS.md`, linking it from `README.md`, and updating the status board plus roadmap to advance the next control-doc slice. Next highest-priority incomplete slice: `docs/project-plan/OPERATIONS.md`.
 - 2026-04-08 09:17 America/Chicago — Push attempt for decisions-log commit `4c2bf5b` failed with `git@github.com: Permission denied (publickey)`. The decisions slice is committed locally but is not on `origin/main`.
 - 2026-04-08 11:06 America/Chicago — Completed slice 4 by adding `docs/project-plan/OPERATIONS.md`, linking it from `README.md`, and updating the status board plus roadmap to move the project from missing ops guidance to the next verification slice. Next highest-priority incomplete slice: verification matrix and executable checks.
+- 2026-04-08 11:15 America/Chicago — Pushed control-doc updates successfully to `origin/main` in commit `2c1c25c` (`docs: add Civic Ledger operations runbook`). The earlier local control-layer commits are no longer stranded off-remote.
 
 ## Immediate next slices
 1. [x] Add `docs/project-plan/STATUS_BOARD.md`.
