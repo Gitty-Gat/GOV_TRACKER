@@ -6,9 +6,9 @@ _Last updated: 2026-04-08_
 This roadmap is the durable execution view for Civic Ledger. It separates what must land for a trustworthy MVP from what is valuable later but should not keep the product in permanent prelaunch.
 
 ## Current phase
-**MVP hardening and launch discipline.**
+**Launch-readiness validation.**
 
-The application already works as a real product. The near-term roadmap is about making its governance, operations, and verification as trustworthy as the scoring model it exposes to users.
+The application and control docs are now in place. The near-term roadmap is no longer about inventing governance; it is about running the verification matrix, confirming live automation health, and then either declaring MVP done or cutting a short failure punch list.
 
 ## Now — required before calling MVP done
 
@@ -31,25 +31,19 @@ Document and verify the intended refresh path:
 
 **Exit condition:** an operator can explain cadence, secrets, expected outputs, partial-data behavior, and recovery steps without reading application code.
 
-### 3) Verification matrix
-Add one explicit verification guide that covers:
-- app smoke routes
-- baseline bootstrap
-- read-model refresh
-- directory metrics refresh
-- scoring semantics
-- fallback behavior when upstream data is partial or stale
+### 3) Execute the verification matrix
+Run the checks captured in `docs/project-plan/VERIFICATION.md` instead of assuming the repo is healthy because the code shape looks good.
 
-**Exit condition:** the MVP has a short, runnable checklist instead of scattered assumptions.
+**Exit condition:** dated verification results exist for static checks, pytest coverage, core route smoke, data refresh commands, and production-adjacent health checks where environment access allows.
 
-### 4) MVP acceptance criteria
-Write down what "done enough to launch" means, and cut non-blocking polish from the near-term path.
+### 4) Confirm live automation and deploy health
+Validate the actual operating path instead of just the intended one.
 
 **Must be explicit about:**
-- what data depth is required versus nice to have
-- which partial-data states are acceptable
-- what must be true for trust/explainability
-- what is intentionally deferred
+- latest GitHub Actions refresh success
+- required secrets actually present
+- Render health status and sample live route checks
+- durable production storage via `DATABASE_URL`
 
 ## Next — important immediately after MVP hardening
 These are strong follow-ons once the control/ops layer is in place:
@@ -77,5 +71,7 @@ To avoid scope drift, the following are **not** required for MVP launch:
 2. [x] Add `docs/project-plan/ROADMAP.md`.
 3. [x] Add `docs/project-plan/DECISIONS.md`.
 4. [x] Add `docs/project-plan/OPERATIONS.md`.
-5. [ ] Add verification matrix and executable checks.
-6. [ ] Define MVP acceptance criteria and launch checklist.
+5. [x] Add verification matrix and executable checks.
+6. [x] Define MVP acceptance criteria and launch checklist.
+7. [ ] Execute the verification matrix in a network-enabled environment.
+8. [ ] Confirm GitHub Actions refresh health and Render production health.

@@ -72,10 +72,15 @@ Push narrow, reviewable changes often. If a block reveals a blocker instead of s
 - 2026-04-08 09:17 America/Chicago — Push attempt for decisions-log commit `4c2bf5b` failed with `git@github.com: Permission denied (publickey)`. The decisions slice is committed locally but is not on `origin/main`.
 - 2026-04-08 11:06 America/Chicago — Completed slice 4 by adding `docs/project-plan/OPERATIONS.md`, linking it from `README.md`, and updating the status board plus roadmap to move the project from missing ops guidance to the next verification slice. Next highest-priority incomplete slice: verification matrix and executable checks.
 - 2026-04-08 11:15 America/Chicago — Pushed control-doc updates successfully to `origin/main` in commit `2c1c25c` (`docs: add Civic Ledger operations runbook`). The earlier local control-layer commits are no longer stranded off-remote.
+- 2026-04-08 11:32 America/Chicago — Completed the next governance slice by adding `docs/project-plan/VERIFICATION.md` and `docs/project-plan/MVP_ACCEPTANCE.md`, and updating the status board plus roadmap so the next slices are explicit verification and automation checks rather than more planning churn.
+- 2026-04-08 11:32 America/Chicago — Local fresh runtime verification remains partially blocked in the Chairman Director sandbox: `pip install -r requirements.txt` cannot complete because package resolution fails with `Temporary failure in name resolution`. `python3 -m compileall app scripts tests` did pass here.
 
 ## Immediate next slices
 1. [x] Add `docs/project-plan/STATUS_BOARD.md`.
 2. [x] Add `docs/project-plan/ROADMAP.md`.
 3. [x] Add `docs/project-plan/DECISIONS.md`.
 4. [x] Add `docs/project-plan/OPERATIONS.md` covering refresh/deploy flow.
-5. [ ] Add verification matrix and executable checks.
+5. [x] Add verification matrix and executable checks.
+6. [x] Define MVP acceptance criteria and launch checklist.
+7. [ ] Execute the verification matrix in a network-enabled environment.
+8. [ ] Confirm GitHub Actions refresh health and Render production health.

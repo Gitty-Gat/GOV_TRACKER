@@ -57,6 +57,8 @@ This MVP ships as a FastAPI application with a designed frontend, precomputed pu
 - Roadmap: [`docs/project-plan/ROADMAP.md`](docs/project-plan/ROADMAP.md)
 - Decisions log: [`docs/project-plan/DECISIONS.md`](docs/project-plan/DECISIONS.md)
 - Operations runbook: [`docs/project-plan/OPERATIONS.md`](docs/project-plan/OPERATIONS.md)
+- Verification matrix: [`docs/project-plan/VERIFICATION.md`](docs/project-plan/VERIFICATION.md)
+- MVP acceptance + launch checklist: [`docs/project-plan/MVP_ACCEPTANCE.md`](docs/project-plan/MVP_ACCEPTANCE.md)
 - Current stand-up plan: [`docs/project-plan/CHAIRMAN_STANDUP_PLAN_2026-04-08.md`](docs/project-plan/CHAIRMAN_STANDUP_PLAN_2026-04-08.md)
 
 ## Local run

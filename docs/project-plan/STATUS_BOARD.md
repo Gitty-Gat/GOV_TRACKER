@@ -3,7 +3,7 @@
 _Last updated: 2026-04-08_
 
 ## Overall status
-Active MVP hardening. The product is real, the read-model strategy is real, and the main remaining work is governance: project tracking, operations clarity, verification discipline, and launch definition.
+Launch-readiness validation. The product and governance layer are both real now; the main remaining work is executing verification and confirming live automation health instead of inferring it.
 
 ## Current snapshot
 - **Product shape:** FastAPI application with a cover page, searchable officeholder directory, definitions page, official detail pages, JSON API endpoints, and a health check.
@@ -41,12 +41,10 @@ Recent commits show steady product movement rather than churn:
 - `2c1c25c` — add operations runbook and link it from the repo front door
 
 ## This block shipped
-- Added a durable status board so project state no longer lives only in commit history.
-- Added `docs/project-plan/ROADMAP.md` so near-term MVP work is sequenced separately from future-state polish.
-- Added `docs/project-plan/DECISIONS.md` to lock the MVP scope boundary, partial-data rules, deploy posture, and explicit deferrals into the repo.
-- Added `docs/project-plan/OPERATIONS.md` as the first real runbook for refresh order, cadence, secrets, stale-data semantics, failure modes, and recovery.
-- Linked the control docs from `README.md` so the governance layer is visible from the repo front door.
-- Captured the next incomplete slices so future stand-ups can continue without archaeology.
+- Added `docs/project-plan/VERIFICATION.md` so the repo now has one explicit verification surface instead of scattered implied checks.
+- Added `docs/project-plan/MVP_ACCEPTANCE.md` so "MVP done" and launch-readiness finally have written criteria instead of vibes.
+- Updated the status board, roadmap, and stand-up trail so the next slices are real validation work, not more governance invention.
+- Captured the remaining blockers explicitly: fresh verification access and live automation visibility.
 
 ## Strengths
 - The application already presents a coherent product story instead of a demo stub.
@@ -55,25 +53,27 @@ Recent commits show steady product movement rather than churn:
 - Partial-data states are intentionally surfaced instead of being hidden behind fake certainty.
 
 ## Gaps blocking “MVP done”
-1. Verification is still spread across README text, scripts, tests, and workflow files instead of one explicit matrix.
-2. Launch acceptance criteria are still implicit.
+1. The verification matrix now exists, but it has not been fully executed in a network-enabled environment.
+2. Production automation health is defined in code/docs, but not freshly confirmed from this sandbox.
 
 ## Active slice tracker
 - [x] Add `docs/project-plan/STATUS_BOARD.md`.
 - [x] Add `docs/project-plan/ROADMAP.md`.
 - [x] Add `docs/project-plan/DECISIONS.md`.
 - [x] Add `docs/project-plan/OPERATIONS.md`.
-- [ ] Add verification matrix and executable checks.
-- [ ] Define MVP acceptance criteria and launch checklist.
+- [x] Add verification matrix and executable checks.
+- [x] Define MVP acceptance criteria and launch checklist.
+- [ ] Execute the verification matrix in a network-enabled environment.
+- [ ] Confirm GitHub Actions refresh health and Render production health.
 
 ## Current risks / blockers
-- **Verification sprawl risk:** tests, scripts, workflow steps, and README notes still need one explicit verification surface before governance feels complete.
-- **Freshness trust risk:** the repo now documents stale and partial data behavior, but operators still need a short executable check set to validate health quickly.
+- **Fresh verification blocker:** this sandbox cannot install dependencies or reach package indexes, so fresh pytest/runtime validation is blocked here until a network-enabled environment runs the matrix.
+- **Automation visibility blocker:** GitHub Actions run health, Render runtime health, and production secret posture are not directly inspectable from this sandbox.
 
 ## Recommended next 30-minute slice
-Add a verification matrix covering:
-- app smoke routes and `/healthz`
-- bootstrap and read-model refresh commands
-- directory-metric refresh behavior
-- scoring/null-verdict semantics under seeded vs enriched data
-- deploy smoke expectations after Render release
+Run the verification matrix in a network-enabled environment and record dated results for:
+- app smoke tests and data/scoring test suites
+- baseline bootstrap and read-model refresh
+- latest GitHub Actions refresh run
+- Render `/healthz` and a sample live page
+- any failures that block an honest MVP-done call
