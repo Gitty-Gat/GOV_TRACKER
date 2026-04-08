@@ -51,6 +51,11 @@ This MVP ships as a FastAPI application with a designed frontend, precomputed pu
 - Storage and cache: Postgres via `DATABASE_URL` in production, SQLite fallback in local dev
 - Tests: pytest
 
+## Project control
+
+- Status board: [`docs/project-plan/STATUS_BOARD.md`](docs/project-plan/STATUS_BOARD.md)
+- Current stand-up plan: [`docs/project-plan/CHAIRMAN_STANDUP_PLAN_2026-04-08.md`](docs/project-plan/CHAIRMAN_STANDUP_PLAN_2026-04-08.md)
+
 ## Local run
 
 ```powershell
