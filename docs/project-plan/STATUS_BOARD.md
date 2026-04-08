@@ -43,6 +43,7 @@ Recent commits show steady product movement rather than churn:
 - Added a durable status board so project state no longer lives only in commit history.
 - Added `docs/project-plan/ROADMAP.md` so near-term MVP work is sequenced separately from future-state polish.
 - Added `docs/project-plan/DECISIONS.md` to lock the MVP scope boundary, partial-data rules, deploy posture, and explicit deferrals into the repo.
+- Added `docs/project-plan/OPERATIONS.md` as the first real runbook for refresh order, cadence, secrets, stale-data semantics, failure modes, and recovery.
 - Linked the control docs from `README.md` so the governance layer is visible from the repo front door.
 - Captured the next incomplete slices so future stand-ups can continue without archaeology.
 
@@ -53,27 +54,27 @@ Recent commits show steady product movement rather than churn:
 - Partial-data states are intentionally surfaced instead of being hidden behind fake certainty.
 
 ## Gaps blocking “MVP done”
-1. Operators do not yet have a dedicated runbook for refresh cadence, secrets, failure modes, and recovery.
-2. Verification is spread across README text, scripts, tests, and workflow files instead of one explicit matrix.
-3. Launch acceptance criteria are still implicit.
-4. Push/auth remains blocked on the execution host, so governance updates are landing locally before they can reach `origin/main`.
+1. Verification is still spread across README text, scripts, tests, and workflow files instead of one explicit matrix.
+2. Launch acceptance criteria are still implicit.
+3. Push/auth remains blocked on the execution host, so governance updates are landing locally before they can reach `origin/main`.
 
 ## Active slice tracker
 - [x] Add `docs/project-plan/STATUS_BOARD.md`.
 - [x] Add `docs/project-plan/ROADMAP.md`.
 - [x] Add `docs/project-plan/DECISIONS.md`.
-- [ ] Add `docs/project-plan/OPERATIONS.md`.
+- [x] Add `docs/project-plan/OPERATIONS.md`.
+- [ ] Add verification matrix and executable checks.
 - [ ] Define MVP acceptance criteria and launch checklist.
 
 ## Current risks / blockers
-- **Operations visibility risk:** refresh logic exists, but operator guidance is not yet centralized.
-- **Freshness trust risk:** stale or partial data behavior is implemented in code, but not yet documented as an explicit operational expectation.
-- **Project hygiene risk:** the control layer is stronger now, but the repo still needs an operations runbook and a single verification surface before governance feels complete.
+- **Verification sprawl risk:** tests, scripts, workflow steps, and README notes still need one explicit verification surface before governance feels complete.
+- **Freshness trust risk:** the repo now documents stale and partial data behavior, but operators still need a short executable check set to validate health quickly.
 - **Git push blocker:** `git push origin main` failed again on 2026-04-08 with `git@github.com: Permission denied (publickey)`. Local commits including `35a8e32`, `bc5f9af`, `1fc2ad9`, and `4c2bf5b` remain ahead of `origin/main` until SSH credentials are fixed on the execution host.
 
 ## Recommended next 30-minute slice
-Add `docs/project-plan/OPERATIONS.md` covering:
-- refresh order and expected outputs
-- required secrets and environment assumptions
-- failure modes for scheduled refresh and deploy
-- operator recovery steps when data or deploy state goes stale
+Add a verification matrix covering:
+- app smoke routes and `/healthz`
+- bootstrap and read-model refresh commands
+- directory-metric refresh behavior
+- scoring/null-verdict semantics under seeded vs enriched data
+- deploy smoke expectations after Render release

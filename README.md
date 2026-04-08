@@ -56,6 +56,7 @@ This MVP ships as a FastAPI application with a designed frontend, precomputed pu
 - Status board: [`docs/project-plan/STATUS_BOARD.md`](docs/project-plan/STATUS_BOARD.md)
 - Roadmap: [`docs/project-plan/ROADMAP.md`](docs/project-plan/ROADMAP.md)
 - Decisions log: [`docs/project-plan/DECISIONS.md`](docs/project-plan/DECISIONS.md)
+- Operations runbook: [`docs/project-plan/OPERATIONS.md`](docs/project-plan/OPERATIONS.md)
 - Current stand-up plan: [`docs/project-plan/CHAIRMAN_STANDUP_PLAN_2026-04-08.md`](docs/project-plan/CHAIRMAN_STANDUP_PLAN_2026-04-08.md)
 
 ## Local run
