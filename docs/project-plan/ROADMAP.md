@@ -75,7 +75,7 @@ To avoid scope drift, the following are **not** required for MVP launch:
 ## Current execution order
 1. [x] Add `docs/project-plan/STATUS_BOARD.md`.
 2. [x] Add `docs/project-plan/ROADMAP.md`.
-3. [ ] Add `docs/project-plan/DECISIONS.md`.
+3. [x] Add `docs/project-plan/DECISIONS.md`.
 4. [ ] Add `docs/project-plan/OPERATIONS.md`.
 5. [ ] Add verification matrix and executable checks.
 6. [ ] Define MVP acceptance criteria and launch checklist.

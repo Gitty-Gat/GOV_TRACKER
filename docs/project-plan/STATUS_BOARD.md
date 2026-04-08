@@ -42,6 +42,7 @@ Recent commits show steady product movement rather than churn:
 ## This block shipped
 - Added a durable status board so project state no longer lives only in commit history.
 - Added `docs/project-plan/ROADMAP.md` so near-term MVP work is sequenced separately from future-state polish.
+- Added `docs/project-plan/DECISIONS.md` to lock the MVP scope boundary, partial-data rules, deploy posture, and explicit deferrals into the repo.
 - Linked the control docs from `README.md` so the governance layer is visible from the repo front door.
 - Captured the next incomplete slices so future stand-ups can continue without archaeology.
 
@@ -52,15 +53,15 @@ Recent commits show steady product movement rather than churn:
 - Partial-data states are intentionally surfaced instead of being hidden behind fake certainty.
 
 ## Gaps blocking “MVP done”
-1. The project still lacks durable control docs beyond the stand-up plan and status board.
-2. Operators do not yet have a dedicated runbook for refresh cadence, secrets, failure modes, and recovery.
-3. Verification is spread across README text, scripts, tests, and workflow files instead of one explicit matrix.
-4. Launch acceptance criteria are still implicit.
+1. Operators do not yet have a dedicated runbook for refresh cadence, secrets, failure modes, and recovery.
+2. Verification is spread across README text, scripts, tests, and workflow files instead of one explicit matrix.
+3. Launch acceptance criteria are still implicit.
+4. Push/auth remains blocked on the execution host, so governance updates are landing locally before they can reach `origin/main`.
 
 ## Active slice tracker
 - [x] Add `docs/project-plan/STATUS_BOARD.md`.
 - [x] Add `docs/project-plan/ROADMAP.md`.
-- [ ] Add `docs/project-plan/DECISIONS.md`.
+- [x] Add `docs/project-plan/DECISIONS.md`.
 - [ ] Add `docs/project-plan/OPERATIONS.md`.
 - [ ] Define MVP acceptance criteria and launch checklist.
 
@@ -71,8 +72,8 @@ Recent commits show steady product movement rather than churn:
 - **Git push blocker:** `git push origin main` failed again on 2026-04-08 with `git@github.com: Permission denied (publickey)`. Local commits including `35a8e32`, `bc5f9af`, and `1fc2ad9` remain ahead of `origin/main` until SSH credentials are fixed on the execution host.
 
 ## Recommended next 30-minute slice
-Add `docs/project-plan/DECISIONS.md` with:
-- the chosen MVP scope boundary
-- what counts as acceptable partial-data behavior
-- the current deploy/refresh posture
-- explicit deferrals so roadmap items do not drift back into the launch path
+Add `docs/project-plan/OPERATIONS.md` covering:
+- refresh order and expected outputs
+- required secrets and environment assumptions
+- failure modes for scheduled refresh and deploy
+- operator recovery steps when data or deploy state goes stale
