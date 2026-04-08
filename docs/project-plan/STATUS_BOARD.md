@@ -68,7 +68,7 @@ Recent commits show steady product movement rather than churn:
 - **Operations visibility risk:** refresh logic exists, but operator guidance is not yet centralized.
 - **Freshness trust risk:** stale or partial data behavior is implemented in code, but not yet documented as an explicit operational expectation.
 - **Project hygiene risk:** without roadmap/decision docs, future stand-ups still require too much archaeology.
-- **Git push blocker:** `git push origin main` failed on 2026-04-08 with `git@github.com: Permission denied (publickey)`. Local commits are ahead of `origin/main` until SSH credentials are fixed on the execution host.
+- **Git push blocker:** `git push origin main` failed again on 2026-04-08 with `git@github.com: Permission denied (publickey)`. Local commits including `35a8e32`, `bc5f9af`, and `1fc2ad9` remain ahead of `origin/main` until SSH credentials are fixed on the execution host.
 
 ## Recommended next 30-minute slice
 Add `docs/project-plan/DECISIONS.md` with:
