@@ -66,9 +66,10 @@ Push narrow, reviewable changes often. If a block reveals a blocker instead of s
 ## Execution log
 - 2026-04-08 02:40 America/Chicago — Completed slice 1 by adding `docs/project-plan/STATUS_BOARD.md` and linking it from `README.md`. Next highest-priority incomplete slice: `docs/project-plan/ROADMAP.md`.
 - 2026-04-08 02:40 America/Chicago — Push attempt for local commits `69bad6b` and `35a8e32` failed with `git@github.com: Permission denied (publickey)`. These docs are committed locally but are not on `origin/main` yet.
+- 2026-04-08 03:10 America/Chicago — Completed slice 2 by adding `docs/project-plan/ROADMAP.md`, linking it from `README.md`, and updating the status board to point at the next control-doc slice. Next highest-priority incomplete slice: `docs/project-plan/DECISIONS.md`.
 
 ## Immediate next slices
 1. [x] Add `docs/project-plan/STATUS_BOARD.md`.
-2. [ ] Add `docs/project-plan/ROADMAP.md`.
+2. [x] Add `docs/project-plan/ROADMAP.md`.
 3. [ ] Add `docs/project-plan/DECISIONS.md`.
 4. [ ] Add `docs/project-plan/OPERATIONS.md` covering refresh/deploy flow.

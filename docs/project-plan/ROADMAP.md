@@ -1,0 +1,81 @@
+# Civic Ledger Roadmap
+
+_Last updated: 2026-04-08_
+
+## Purpose
+This roadmap is the durable execution view for Civic Ledger. It separates what must land for a trustworthy MVP from what is valuable later but should not keep the product in permanent prelaunch.
+
+## Current phase
+**MVP hardening and launch discipline.**
+
+The application already works as a real product. The near-term roadmap is about making its governance, operations, and verification as trustworthy as the scoring model it exposes to users.
+
+## Now — required before calling MVP done
+
+### 1) Project control surface
+Create and keep current the small set of operating docs that let future contributors continue without archaeology:
+- `docs/project-plan/STATUS_BOARD.md`
+- `docs/project-plan/ROADMAP.md`
+- `docs/project-plan/DECISIONS.md`
+- `docs/project-plan/OPERATIONS.md`
+
+**Why this matters:** project state should live in the repo, not only in commit history or stand-up notes.
+
+### 2) Data operations hardening
+Document and verify the intended refresh path:
+- baseline seed via `scripts/bootstrap_precomputed_data.py`
+- full wrapper via `scripts/refresh_all_data.py`
+- read-model enrichment via `scripts/refresh_read_model.py --refresh-promises`
+- directory refresh via `scripts/refresh_directory_metrics.py`
+- scheduled production refresh via `.github/workflows/refresh-data.yml`
+
+**Exit condition:** an operator can explain cadence, secrets, expected outputs, partial-data behavior, and recovery steps without reading application code.
+
+### 3) Verification matrix
+Add one explicit verification guide that covers:
+- app smoke routes
+- baseline bootstrap
+- read-model refresh
+- directory metrics refresh
+- scoring semantics
+- fallback behavior when upstream data is partial or stale
+
+**Exit condition:** the MVP has a short, runnable checklist instead of scattered assumptions.
+
+### 4) MVP acceptance criteria
+Write down what "done enough to launch" means, and cut non-blocking polish from the near-term path.
+
+**Must be explicit about:**
+- what data depth is required versus nice to have
+- which partial-data states are acceptable
+- what must be true for trust/explainability
+- what is intentionally deferred
+
+## Next — important immediately after MVP hardening
+These are strong follow-ons once the control/ops layer is in place:
+- add a clearer verification matrix or release checklist for deploy smoke and refresh smoke
+- improve freshness visibility in the product and/or operator docs
+- tighten manual-promise enrichment workflow so curated promise coverage can expand cleanly
+- reduce ambiguity around stale-data and partial-enrichment presentation in the UI
+
+## Later — valuable, but not launch-blocking
+These should stay out of the MVP critical path unless they directly improve launch trustworthiness:
+- future news/context module referenced in the README
+- richer frontend or client-side application layer beyond the current server-rendered MVP
+- broader comparative analytics across members, states, caucuses, or issue cohorts
+- additional public-data integrations that expand scope beyond the current trust-and-activity story
+
+## Explicit MVP non-goals
+To avoid scope drift, the following are **not** required for MVP launch:
+- real-time congressional or finance ingestion on the request path
+- exhaustive promise coverage for every current member
+- causal claims between donations and legislative outcomes
+- launching future modules simply because the repo has a placeholder for them
+
+## Current execution order
+1. [x] Add `docs/project-plan/STATUS_BOARD.md`.
+2. [x] Add `docs/project-plan/ROADMAP.md`.
+3. [ ] Add `docs/project-plan/DECISIONS.md`.
+4. [ ] Add `docs/project-plan/OPERATIONS.md`.
+5. [ ] Add verification matrix and executable checks.
+6. [ ] Define MVP acceptance criteria and launch checklist.

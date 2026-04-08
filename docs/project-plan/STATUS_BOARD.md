@@ -41,7 +41,8 @@ Recent commits show steady product movement rather than churn:
 
 ## This block shipped
 - Added a durable status board so project state no longer lives only in commit history.
-- Linked the board from `README.md` so the control layer is visible from the repo front door.
+- Added `docs/project-plan/ROADMAP.md` so near-term MVP work is sequenced separately from future-state polish.
+- Linked the control docs from `README.md` so the governance layer is visible from the repo front door.
 - Captured the next incomplete slices so future stand-ups can continue without archaeology.
 
 ## Strengths
@@ -58,7 +59,7 @@ Recent commits show steady product movement rather than churn:
 
 ## Active slice tracker
 - [x] Add `docs/project-plan/STATUS_BOARD.md`.
-- [ ] Add `docs/project-plan/ROADMAP.md`.
+- [x] Add `docs/project-plan/ROADMAP.md`.
 - [ ] Add `docs/project-plan/DECISIONS.md`.
 - [ ] Add `docs/project-plan/OPERATIONS.md`.
 - [ ] Define MVP acceptance criteria and launch checklist.
@@ -70,7 +71,8 @@ Recent commits show steady product movement rather than churn:
 - **Git push blocker:** `git push origin main` failed on 2026-04-08 with `git@github.com: Permission denied (publickey)`. Local commits are ahead of `origin/main` until SSH credentials are fixed on the execution host.
 
 ## Recommended next 30-minute slice
-Add `docs/project-plan/ROADMAP.md` with:
-- **Now:** governance + ops hardening for launch readiness
-- **Next:** verification matrix and stale-data handling checks
-- **Later:** future-module polish that is not required for MVP launch
+Add `docs/project-plan/DECISIONS.md` with:
+- the chosen MVP scope boundary
+- what counts as acceptable partial-data behavior
+- the current deploy/refresh posture
+- explicit deferrals so roadmap items do not drift back into the launch path
