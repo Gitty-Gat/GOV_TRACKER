@@ -69,6 +69,7 @@ Push narrow, reviewable changes often. If a block reveals a blocker instead of s
 - 2026-04-08 03:10 America/Chicago — Completed slice 2 by adding `docs/project-plan/ROADMAP.md`, linking it from `README.md`, and updating the status board to point at the next control-doc slice. Next highest-priority incomplete slice: `docs/project-plan/DECISIONS.md`.
 - 2026-04-08 03:10 America/Chicago — Push attempt for roadmap commit `1fc2ad9` failed with `git@github.com: Permission denied (publickey)`. The roadmap slice is committed locally but is not on `origin/main`.
 - 2026-04-08 08:40 America/Chicago — Completed slice 3 by adding `docs/project-plan/DECISIONS.md`, linking it from `README.md`, and updating the status board plus roadmap to advance the next control-doc slice. Next highest-priority incomplete slice: `docs/project-plan/OPERATIONS.md`.
+- 2026-04-08 09:17 America/Chicago — Push attempt for decisions-log commit `4c2bf5b` failed with `git@github.com: Permission denied (publickey)`. The decisions slice is committed locally but is not on `origin/main`.
 
 ## Immediate next slices
 1. [x] Add `docs/project-plan/STATUS_BOARD.md`.
