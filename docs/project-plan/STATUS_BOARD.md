@@ -1,6 +1,6 @@
 # Civic Ledger Status Board
 
-_Last updated: 2026-04-08_
+_Last updated: 2026-04-09_
 
 ## Overall status
 Launch-readiness validation. The product and governance layer are both real now; the main remaining work is executing verification and confirming live automation health instead of inferring it.
@@ -41,10 +41,10 @@ Recent commits show steady product movement rather than churn:
 - `2c1c25c` — add operations runbook and link it from the repo front door
 
 ## This block shipped
-- Added `docs/project-plan/VERIFICATION.md` so the repo now has one explicit verification surface instead of scattered implied checks.
-- Added `docs/project-plan/MVP_ACCEPTANCE.md` so "MVP done" and launch-readiness finally have written criteria instead of vibes.
-- Updated the status board, roadmap, and stand-up trail so the next slices are real validation work, not more governance invention.
-- Captured the remaining blockers explicitly: fresh verification access and live automation visibility.
+- Tightened `docs/project-plan/OPERATIONS.md` against the actual repo surfaces instead of hand-wavy assumptions.
+- Recorded the scheduled workflow's real shape from `.github/workflows/refresh-data.yml`: checkout, Python `3.13`, install, baseline seed, then read-model refresh.
+- Captured repo-backed operational specifics that were previously implicit: workflow-pinned environment values, the directory repair script's current warm-up scope, and the Render deploy script's encoded branch/plan/region defaults.
+- Left the core blockers unchanged and explicit: fresh verification still needs network access, and live automation health still needs external observation.
 
 ## Strengths
 - The application already presents a coherent product story instead of a demo stub.

@@ -128,8 +128,8 @@ python scripts/refresh_directory_metrics.py
 What it does:
 - refreshes current members if needed
 - forces directory finance metrics refresh
-- recomputes directory efficiency metrics
-- warms donor-name summaries for a subset of high-visibility cards
+- recomputes directory efficiency metrics for up to 120 officials in the current pass
+- warms donor-name summaries for the first 24 cards in both `name` and `money_desc` sorts
 
 Expected result:
 - `/officeholders` card metrics improve even if full profile enrichment is lagging
@@ -172,9 +172,17 @@ Current cadence:
 - daily at `0 10 * * *` (10:00 UTC)
 
 Current workflow order:
-1. install dependencies
-2. seed baseline snapshots
-3. refresh live read model with `--refresh-promises`
+1. check out the repo
+2. set up Python `3.13`
+3. install dependencies with `pip install -r requirements.txt`
+4. seed baseline snapshots
+5. refresh live read model with `--refresh-promises`
+
+Workflow-pinned environment:
+- `CURRENT_CONGRESS=119`
+- `DEFAULT_CYCLE=2026`
+- `DATABASE_PATH=data/civic_ledger.db`
+- `DATABASE_URL` is still expected when production should use durable hosted storage instead of local-file fallback semantics
 
 Required GitHub secrets:
 - `CONGRESS_API_KEY`
@@ -184,6 +192,7 @@ Required GitHub secrets:
 Operational expectation:
 - baseline seeding ensures the product stays renderable even if deeper enrichment later degrades
 - read-model refresh is the step that makes verdicts, donor detail, and richer activity views trustworthy
+- this workflow does not perform deploys; refresh health and deploy health are separate checks
 
 ## Deployment operations
 
@@ -198,6 +207,7 @@ What it does:
 - discovers the Git remote URL
 - chooses a Render owner/workspace
 - creates or updates the `civic-ledger` web service
+- targets branch `main` with Python runtime settings from the script
 - syncs environment variables
 - triggers a deploy
 - waits for terminal deploy state
@@ -211,6 +221,7 @@ Expected healthy state:
 - build command: `pip install -r requirements.txt`
 - start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - health check: `/healthz`
+- deploy target encoded in the script today: plan `free`, region `oregon`, branch `main`
 
 ## Known failure modes and what they mean
 
