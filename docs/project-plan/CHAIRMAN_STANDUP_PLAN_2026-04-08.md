@@ -13,40 +13,35 @@ Deliver a transparent House-and-Senate dashboard that shows who funds an elected
 - The README is already sharper and more product-specific than many MVP repos.
 
 ## Remaining to complete
-1. Make the data-refresh and read-model pipeline more visibly governed and auditable.
-2. Add a durable roadmap and tracker so status does not live only in commits and memory.
-3. Strengthen coverage around scoring semantics, enrichment readiness, and stale-data handling.
-4. Document production operations clearly: refresh cadence, secrets, failure modes, and recovery.
-5. Clarify what “MVP done” means versus what remains future-state polish.
+1. Execute the verification matrix in a network-enabled environment and record dated results.
+2. Confirm GitHub Actions refresh health, Render health, and durable production storage assumptions.
+3. Record any failures or gaps explicitly instead of inferring readiness from repo shape.
 
 ## Candid critique / contradictions
-- The repo is ahead of the director workspace that is supposed to coordinate it; the software is more real than the management layer around it.
-- Product direction is fairly clear, but the project still lacks an explicit control surface for decisions, blockers, and next actions.
-- There is a risk of shipping a trustworthy product with untrustworthy project hygiene — the app is explainable, but the execution layer is not yet equally transparent.
+- The repo is no longer missing a management layer; the control docs now exist, but the live operating path is still only partially observed.
+- Product direction is fairly clear, but launch confidence still depends on fresh verification evidence rather than documentation alone.
+- There is still a risk of calling the product trustworthy before refresh/deploy health has been observed end to end.
 
 ## Improvement opportunities
-- Add a concise roadmap and decision log.
-- Add explicit data-refresh operating docs and failure/recovery notes.
-- Add a verification matrix for bootstrap, refresh, directory page, detail page, scoring, and deployment smoke.
-- Add one current status board so future stand-ups do not require archaeology.
+- Record dated verification results directly against the verification matrix.
+- Add a short production-observation trail for GitHub Actions, Render health, and storage posture.
+- Tighten any remaining stale status language so future stand-ups do not backslide into already-finished setup work.
 
 ## Completion plan
 
 ### Milestone 1 — Project control layer
-- Add status, roadmap, decisions, and blockers files.
-- Link them from the README.
+- Status, roadmap, decisions, blockers, and README links are now in place.
 
 ### Milestone 2 — Data operations hardening
-- Document refresh order, failure handling, and expected outputs.
-- Add missing guardrails around stale or partial data states.
+- Refresh order, failure handling, expected outputs, and readiness semantics are now documented.
 
 ### Milestone 3 — Product verification
-- Verify key routes, read-model refresh scripts, and scoring behavior with explicit commands.
-- Capture what is seeded, partial, and enriched.
+- Verification matrix and MVP acceptance criteria now exist.
+- Remaining work is to execute the matrix in a network-enabled environment and capture dated results.
 
 ### Milestone 4 — MVP closeout
-- Define exact MVP acceptance criteria.
-- Cut remaining “future module” scope from near-term execution unless it directly supports launch.
+- Confirm live automation/deploy health.
+- Either declare MVP done with evidence or cut a short failure punch list.
 
 ## 30-minute execution cadence
 Each block should:

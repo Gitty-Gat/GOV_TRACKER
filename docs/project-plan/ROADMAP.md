@@ -47,7 +47,7 @@ Validate the actual operating path instead of just the intended one.
 
 ## Next — important immediately after MVP hardening
 These are strong follow-ons once the control/ops layer is in place:
-- add a clearer verification matrix or release checklist for deploy smoke and refresh smoke
+- extend the existing verification matrix with a dated release-results appendix for deploy smoke and refresh smoke
 - improve freshness visibility in the product and/or operator docs
 - tighten manual-promise enrichment workflow so curated promise coverage can expand cleanly
 - reduce ambiguity around stale-data and partial-enrichment presentation in the UI
