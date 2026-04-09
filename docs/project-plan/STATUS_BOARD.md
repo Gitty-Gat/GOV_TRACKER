@@ -42,6 +42,7 @@ Recent commits show steady product movement rather than churn:
 
 ## This block shipped
 - Tightened `docs/project-plan/OPERATIONS.md` against the actual repo surfaces instead of hand-wavy assumptions.
+- Rechecked the runbook against the current repo on 2026-04-09 so the documented workflow order, directory repair bounds, and Render deploy defaults still match code.
 - Recorded the scheduled workflow's real shape from `.github/workflows/refresh-data.yml`: checkout, Python `3.13`, install, baseline seed, then read-model refresh.
 - Captured repo-backed operational specifics that were previously implicit: workflow-pinned environment values, the directory repair script's current warm-up scope, and the Render deploy script's encoded branch/plan/region defaults.
 - Left the core blockers unchanged and explicit: fresh verification still needs network access, and live automation health still needs external observation.

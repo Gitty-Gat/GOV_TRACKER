@@ -1,6 +1,6 @@
 # Civic Ledger Operations
 
-_Last updated: 2026-04-08_
+_Last updated: 2026-04-09_
 
 ## Purpose
 This runbook explains how Civic Ledger is supposed to refresh, what "healthy" looks like, which secrets matter, and how to recover when upstream data or deployment automation misbehaves.
@@ -131,6 +131,8 @@ What it does:
 - recomputes directory efficiency metrics for up to 120 officials in the current pass
 - warms donor-name summaries for the first 24 cards in both `name` and `money_desc` sorts
 
+These bounds are verified against `scripts/refresh_directory_metrics.py` in the current repo.
+
 Expected result:
 - `/officeholders` card metrics improve even if full profile enrichment is lagging
 - this mainly affects `directory_metric`, not the whole deep profile surface
@@ -171,7 +173,7 @@ Workflow:
 Current cadence:
 - daily at `0 10 * * *` (10:00 UTC)
 
-Current workflow order:
+Current workflow order, verified against `.github/workflows/refresh-data.yml`:
 1. check out the repo
 2. set up Python `3.13`
 3. install dependencies with `pip install -r requirements.txt`
@@ -221,7 +223,7 @@ Expected healthy state:
 - build command: `pip install -r requirements.txt`
 - start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - health check: `/healthz`
-- deploy target encoded in the script today: plan `free`, region `oregon`, branch `main`
+- deploy target encoded in `scripts/deploy_render.py` today: plan `free`, region `oregon`, branch `main`
 
 ## Known failure modes and what they mean
 

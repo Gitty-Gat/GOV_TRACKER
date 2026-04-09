@@ -1,6 +1,6 @@
 # Civic Ledger Roadmap
 
-_Last updated: 2026-04-08_
+_Last updated: 2026-04-09_
 
 ## Purpose
 This roadmap is the durable execution view for Civic Ledger. It separates what must land for a trustworthy MVP from what is valuable later but should not keep the product in permanent prelaunch.
@@ -8,7 +8,7 @@ This roadmap is the durable execution view for Civic Ledger. It separates what m
 ## Current phase
 **Launch-readiness validation.**
 
-The application and control docs are now in place. The near-term roadmap is no longer about inventing governance; it is about running the verification matrix, confirming live automation health, and then either declaring MVP done or cutting a short failure punch list.
+The application and control docs are now in place, and the operations runbook has been tightened against the current repo surfaces. The near-term roadmap is no longer about inventing governance; it is about running the verification matrix, confirming live automation health, and then either declaring MVP done or cutting a short failure punch list.
 
 ## Now — required before calling MVP done
 
