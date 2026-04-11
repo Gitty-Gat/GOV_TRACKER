@@ -1,13 +1,13 @@
 # Civic Ledger Verification Matrix
 
-_Last updated: 2026-04-08_
+_Last updated: 2026-04-10_
 
 ## Purpose
 This file is the single verification surface for Civic Ledger. It turns the repo's tests, scripts, routes, and production automation into one explicit checklist so MVP health is not inferred from scattered files.
 
 ## Status meanings
-- **PASS** — explicitly covered by committed tests or a durable workflow surface.
-- **DEFINED** — command, artifact, and pass rule are now specified here, but this slice did not re-run it end to end.
+- **PASS** — explicitly covered by committed tests or a durable repo-backed verification surface. This means the repo already contains the test/workflow evidence; it does **not** mean this slice reran every command live.
+- **DEFINED** — command, artifact, and pass rule are specified here, but this slice did not re-run it end to end.
 - **EXTERNAL** — requires observing deployment or remote workflow state outside the local repo alone.
 
 ## Verification rows
@@ -29,5 +29,5 @@ This file is the single verification surface for Civic Ledger. It turns the repo
 
 ## Notes
 - This matrix intentionally distinguishes repo-backed verification from deployment-backed verification.
-- Local tests already give strong confidence in the product surface and scoring semantics.
+- Committed local tests give strong confidence in the product surface and scoring semantics, but this file should not be read as a fresh execution log unless dated run results are appended.
 - The main remaining verification gap is operational observation of the production refresh/deploy path, not missing application structure.

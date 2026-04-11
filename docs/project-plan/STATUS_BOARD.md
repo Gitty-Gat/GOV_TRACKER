@@ -1,6 +1,6 @@
 # Civic Ledger Status Board
 
-_Last updated: 2026-04-09_
+_Last updated: 2026-04-10_
 
 ## Overall status
 Launch-readiness validation. The product and governance layer are both real now; the main remaining work is executing verification and confirming live automation health instead of inferring it.
@@ -28,24 +28,19 @@ Launch-readiness validation. The product and governance layer are both real now;
 - **Scoring semantics:** `tests/test_scoring.py`
 
 ## Recent momentum
-Recent commits show steady product movement rather than churn:
-- `0e7b261` — seed baseline snapshots and split entry pages
-- `9f80839` — speed up baseline bootstrap build
-- `dbaef49` — keep Render build fast and seed externally
-- `0e6babc` — reuse DB connections for batch refresh scripts
-- `7e08c7d` — backfill baseline finance and show partial activity counts
-- `86a257a` — backfill finance and activity in the read model
-- `d85954f` — restore profile finance and verdict sections
-- `69bad6b` — add chairman stand-up completion plan
-- `35a8e32` — add project status board
+Recent commits continue to move the governance layer forward rather than reopening scope:
+- `6b0178e` — refresh launch planning status
+- `7c67d71` — tighten launch operations notes
+- `d067cb3` — clean up stale launch governance status
+- `4e87ba3` — add launch verification controls
+- `16f3baf` — clear resolved push blocker
 - `2c1c25c` — add operations runbook and link it from the repo front door
 
 ## This block shipped
-- Tightened `docs/project-plan/OPERATIONS.md` against the actual repo surfaces instead of hand-wavy assumptions.
-- Rechecked the runbook against the current repo on 2026-04-09 so the documented workflow order, directory repair bounds, and Render deploy defaults still match code.
-- Recorded the scheduled workflow's real shape from `.github/workflows/refresh-data.yml`: checkout, Python `3.13`, install, baseline seed, then read-model refresh.
-- Captured repo-backed operational specifics that were previously implicit: workflow-pinned environment values, the directory repair script's current warm-up scope, and the Render deploy script's encoded branch/plan/region defaults.
-- Left the core blockers unchanged and explicit: fresh verification still needs network access, and live automation health still needs external observation.
+- Rechecked `STATUS_BOARD.md`, `VERIFICATION.md`, and `MVP_ACCEPTANCE.md` against the actual repo surfaces on 2026-04-10 instead of relying on earlier planning language.
+- Confirmed the still-live operational facts that matter for launch posture: scheduled refresh remains checkout → Python `3.13` → install → baseline seed → read-model refresh; directory repair still warms 24 cards across `name` and `money_desc`; Render deploy defaults are still branch `main`, plan `free`, region `oregon`, and `/healthz` smoke.
+- Tightened the status language so repo-backed coverage, defined-but-not-rerun commands, and externally-observed production checks are clearly separated.
+- Left the real blockers unchanged and explicit: fresh execution still needs a network-enabled environment, and live automation/deploy health still requires outside-the-sandbox observation.
 
 ## Strengths
 - The application already presents a coherent product story instead of a demo stub.
