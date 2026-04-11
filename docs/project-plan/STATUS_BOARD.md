@@ -1,6 +1,6 @@
 # Civic Ledger Status Board
 
-_Last updated: 2026-04-10_
+_Last updated: 2026-04-11_
 
 ## Overall status
 Launch-readiness validation. The product and governance layer are both real now; the main remaining work is executing verification and confirming live automation health instead of inferring it.
@@ -29,17 +29,17 @@ Launch-readiness validation. The product and governance layer are both real now;
 
 ## Recent momentum
 Recent commits continue to move the governance layer forward rather than reopening scope:
+- `d787839` — clean up stale launch status language
 - `6b0178e` — refresh launch planning status
 - `7c67d71` — tighten launch operations notes
 - `d067cb3` — clean up stale launch governance status
 - `4e87ba3` — add launch verification controls
 - `16f3baf` — clear resolved push blocker
-- `2c1c25c` — add operations runbook and link it from the repo front door
 
 ## This block shipped
-- Rechecked `STATUS_BOARD.md`, `VERIFICATION.md`, and `MVP_ACCEPTANCE.md` against the actual repo surfaces on 2026-04-10 instead of relying on earlier planning language.
-- Confirmed the still-live operational facts that matter for launch posture: scheduled refresh remains checkout → Python `3.13` → install → baseline seed → read-model refresh; directory repair still warms 24 cards across `name` and `money_desc`; Render deploy defaults are still branch `main`, plan `free`, region `oregon`, and `/healthz` smoke.
-- Tightened the status language so repo-backed coverage, defined-but-not-rerun commands, and externally-observed production checks are clearly separated.
+- Rechecked `STATUS_BOARD.md`, `VERIFICATION.md`, `MVP_ACCEPTANCE.md`, `.github/workflows/refresh-data.yml`, `scripts/deploy_render.py`, and `scripts/refresh_directory_metrics.py` against the current repo on 2026-04-11 instead of assuming yesterday's governance text was still fresh.
+- Confirmed that the launch-critical operational facts remain unchanged: scheduled refresh is still checkout → Python `3.13` → install → baseline seed → read-model refresh; directory repair still refreshes up to 120 officials and warms 24 cards across `name` and `money_desc`; Render deploy defaults are still branch `main`, plan `free`, region `oregon`, and `/healthz` smoke.
+- Updated this board so the latest governance-cleanup commit and today's repo-backed recheck are visible without overstating progress.
 - Left the real blockers unchanged and explicit: fresh execution still needs a network-enabled environment, and live automation/deploy health still requires outside-the-sandbox observation.
 
 ## Strengths
