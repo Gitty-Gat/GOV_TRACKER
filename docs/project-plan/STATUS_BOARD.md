@@ -1,6 +1,6 @@
 # Civic Ledger Status Board
 
-_Last updated: 2026-04-11_
+_Last updated: 2026-04-12_
 
 ## Overall status
 Launch-readiness validation. The product and governance layer are both real now; the main remaining work is executing verification and confirming live automation health instead of inferring it.
@@ -37,9 +37,9 @@ Recent commits continue to move the governance layer forward rather than reopeni
 - `16f3baf` — clear resolved push blocker
 
 ## This block shipped
-- Rechecked `STATUS_BOARD.md`, `VERIFICATION.md`, `MVP_ACCEPTANCE.md`, `.github/workflows/refresh-data.yml`, `scripts/deploy_render.py`, and `scripts/refresh_directory_metrics.py` against the current repo on 2026-04-11 instead of assuming yesterday's governance text was still fresh.
-- Confirmed that the launch-critical operational facts remain unchanged: scheduled refresh is still checkout → Python `3.13` → install → baseline seed → read-model refresh; directory repair still refreshes up to 120 officials and warms 24 cards across `name` and `money_desc`; Render deploy defaults are still branch `main`, plan `free`, region `oregon`, and `/healthz` smoke.
-- Updated this board so the latest governance-cleanup commit and today's repo-backed recheck are visible without overstating progress.
+- Rechecked `STATUS_BOARD.md`, `OPERATIONS.md`, `VERIFICATION.md`, `MVP_ACCEPTANCE.md`, `.github/workflows/refresh-data.yml`, `scripts/deploy_render.py`, and `scripts/refresh_directory_metrics.py` against the current repo on 2026-04-12 instead of carrying forward yesterday's launch text by inertia.
+- Reconfirmed that the launch-critical operational facts are unchanged in code: scheduled refresh is still checkout → Python `3.13` → install → baseline seed → read-model refresh; directory repair still refreshes up to 120 officials and warms 24 cards across `name` and `money_desc`; Render deploy defaults are still branch `main`, plan `free`, region `oregon`, and `/healthz` smoke.
+- Updated this board so the dated repo-backed recheck is visible without pretending the remaining external verification blockers moved.
 - Left the real blockers unchanged and explicit: fresh execution still needs a network-enabled environment, and live automation/deploy health still requires outside-the-sandbox observation.
 
 ## Strengths
