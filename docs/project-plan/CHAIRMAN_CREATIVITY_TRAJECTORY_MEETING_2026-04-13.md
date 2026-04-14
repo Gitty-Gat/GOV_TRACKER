@@ -55,6 +55,9 @@ What would help me most:
 - GitHub CLI or equivalent repo/CI visibility from the director environment
 - durable production/staging credentials scoped for safe verification work
 - a single place to observe production freshness, workflow success, and deploy health
+- a deterministic execution pipeline instead of ad-hoc orchestration, manual prodding, and session-state guesswork
+
+**Director:** More bluntly: I do not want to keep babysitting runtime ambiguity. I want one source of truth for run state, blockers, retries, and failures. Right now too much execution energy is wasted on orchestration noise instead of product progress.
 
 ### What is the single biggest change the project needs now?
 
@@ -79,6 +82,11 @@ The codebase already has enough surface area. What it lacks is a sharpened go-to
 3. **A shareable evidence artifact**
    - a page, export, or packet that lets someone cite why the score exists
    - not just a dashboard they looked at once
+
+4. **A coherent narrative that new people can understand quickly**
+   - what this is
+   - who it is for
+   - what it does better than generic civic-data tooling
 
 If this succeeds, users should not just browse it. They should **use it as ammunition, reference, and proof**.
 
@@ -316,15 +324,24 @@ Potential future applications:
    **Recommended path:** narrower accountability wedge with explicit first users and higher trust density.
 
 3. **Current path:** trust is documented mainly through methodology, readiness semantics, and governance.
-   **Recommended path:** trust must also be operationalized in UI, exports, freshness indicators, and coverage policy.
+   **Recommended path:** trust must also be operationalized in UI, exports, freshness indicators, published controls, and coverage policy.
 
-4. **Current path:** promise inference remains an acceptable fallback for wide coverage.
+4. **Current path:** launch messaging can outrun visible proof.
+   **Recommended path:** no trust-forward claims without public trust artifacts, an incident playbook, and a clear accountability owner.
+
+5. **Current path:** runtime execution is still too manual and stateful.
+   **Recommended path:** deterministic job orchestration with auditability, retries, and cleaner operator visibility.
+
+6. **Current path:** the repo implies the story is already legible.
+   **Recommended path:** explicitly write the mission, first user, core workflow, and why this matters so docs stop forcing readers to infer intent.
+
+7. **Current path:** promise inference remains an acceptable fallback for wide coverage.
    **Recommended path:** human-reviewed promise coverage should dominate wherever the score matters most.
 
-5. **Current path:** general-purpose dashboard browsing is the primary interaction.
+8. **Current path:** general-purpose dashboard browsing is the primary interaction.
    **Recommended path:** evidence-backed, shareable official dossiers / briefs should become the core user outcome.
 
-6. **Current path:** success condition is mostly "MVP done honestly."
+9. **Current path:** success condition is mostly "MVP done honestly."
    **Recommended path:** success condition is "a trusted accountability workflow that people will repeatedly use and cite."
 
 ---
@@ -365,6 +382,10 @@ Potential future applications:
    - Need: product usage visibility without surveillance creep
    - Likely source: Plausible, PostHog, or light self-hosted analytics
 
+4. **Trust artifacts and controls publishing**
+   - Need: a public-facing or at least operator-visible trust layer: controls, evidence, incident handling, accountability ownership
+   - Likely source: built in-repo with Sean-approved policy and, ideally, external validation help
+
 ## Access needs
 
 1. **GitHub Actions visibility and control**
@@ -393,6 +414,10 @@ Potential future applications:
    - Need: operator view for refresh status and coverage quality
    - Likely source: built in-repo; possibly autonomous after access is granted
 
+4. **Deterministic runtime pipeline tooling**
+   - Need: queued jobs, idempotency, reconciliation, dead-letter handling, audit logs, and a visible blocker/run-state layer
+   - Likely source: built in-repo by GOV engineering once Sean approves architecture and scope
+
 ## Partnerships needs
 
 1. **Early design partners**
@@ -411,6 +436,12 @@ Potential future applications:
    - Likely source: Sean
 5. **Decide trust posture around scoring claims**
    - Likely source: Sean with director recommendation
+6. **Name one accountable trust owner**
+   - Likely source: Sean
+7. **Approve the runtime architecture baseline**
+   - Likely source: Sean with GOV engineering recommendation
+8. **Approve the canonical mission/narrative statement**
+   - Likely source: Sean
 
 ---
 

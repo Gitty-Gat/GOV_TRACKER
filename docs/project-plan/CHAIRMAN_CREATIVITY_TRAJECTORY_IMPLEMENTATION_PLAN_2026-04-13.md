@@ -23,6 +23,8 @@ The implementation plan below assumes the recommended direction is:
 2. Choose first user + launch wedge
 3. Define trust boundary for scoring and coverage
 4. Make freshness / coverage visible in product, not only docs
+5. Replace manual orchestration drift with a deterministic runtime baseline
+6. Establish a hard trust gate before any trust-forward launch messaging
 
 ## P1 — Next after P0
 5. Build shareable official evidence brief/export
@@ -111,7 +113,26 @@ The implementation plan below assumes the recommended direction is:
 
 ---
 
-### 5) Add product-visible freshness and coverage indicators
+### 5) Establish the hard trust gate
+**Action:** formally require that no trust-forward launch claims go out without visible proof artifacts.
+
+**Minimum artifacts:**
+- published or operator-visible controls list
+- dated verification evidence
+- incident playbook
+- named accountability owner
+- explicit go/no-go review cadence
+
+**Reason:** the project is reputationally fragile; signaling readiness faster than proving it is how trust debt gets created.
+
+**Owner assumption:** gov-director + gov-audit
+**External dependency:** Sean naming the trust owner and approving the gate
+**Requires Sean specifically:** yes
+**Can be done autonomously:** only draft preparation, not final authority
+
+---
+
+### 6) Add product-visible freshness and coverage indicators
 **Action:** elevate current readiness semantics into prominent product surfaces.
 
 **Implementation target:**
@@ -129,7 +150,7 @@ The implementation plan below assumes the recommended direction is:
 
 ## One month / next 30 days
 
-### 6) Build the core shareable artifact
+### 7) Build the core shareable artifact
 **Action:** create an official brief / exportable accountability packet.
 
 **Minimum viable shape:**
@@ -150,7 +171,7 @@ The implementation plan below assumes the recommended direction is:
 
 ---
 
-### 7) Create a tiered coverage policy
+### 8) Create a tiered coverage policy
 **Action:** split coverage into explicit tiers.
 
 **Recommended policy:**
@@ -166,7 +187,7 @@ The implementation plan below assumes the recommended direction is:
 
 ---
 
-### 8) Stand up basic observability
+### 9) Stand up basic observability
 **Action:** implement:
 - deploy health checks
 - refresh run status view
@@ -182,7 +203,7 @@ The implementation plan below assumes the recommended direction is:
 
 ---
 
-### 9) Establish manual promise curation workflow
+### 10) Establish manual promise curation workflow
 **Action:** define how new manual promises enter `data/manual_promises.json` or successor storage.
 
 **Must include:**
@@ -200,7 +221,7 @@ The implementation plan below assumes the recommended direction is:
 
 ## One year / long term
 
-### 10) Turn Civic Ledger into accountability infrastructure
+### 11) Turn Civic Ledger into accountability infrastructure
 **Action:** evolve from a website into a durable trust platform.
 
 **Capabilities to add over time:**
@@ -243,6 +264,8 @@ The implementation plan below assumes the recommended direction is:
 5. Draft tiered coverage policy.
 6. Draft manual promise curation SOP.
 7. Add release-evidence and operations-observation logging.
+8. Write the canonical mission/narrative package so the repo stops forcing new readers to infer what Civic Ledger is.
+9. Design the deterministic runtime baseline: run-state model, retries, idempotency, reconciliation, and audit log shape.
 
 ## Priority 3 — Access-dependent execution
 1. Run verification matrix in a working environment.
@@ -250,6 +273,7 @@ The implementation plan below assumes the recommended direction is:
 3. Inspect Render health and logs.
 4. Validate production database posture.
 5. Install/use missing tooling in director runtime (`pytest`, `gh`, or equivalents).
+6. Provision whatever service/support is needed for observability and trust controls.
 
 ---
 
@@ -260,6 +284,7 @@ The implementation plan below assumes the recommended direction is:
 - Render service visibility and logs
 - durable production database confirmation
 - working network-enabled Python environment with test dependencies
+- a reliable path to publish or review trust artifacts and operational controls
 
 ## Likely service/tool choices
 - Postgres host: Render/Neon/Supabase
@@ -285,6 +310,9 @@ The implementation plan below assumes the recommended direction is:
 5. Deciding how much manual promise curation investment the project will support
 6. Deciding whether the first market is media, advocacy, civic education, or campaign-adjacent research
 7. Choosing whether breadth or trust density wins when they conflict
+8. Naming the accountable trust owner
+9. Approving the deterministic runtime architecture baseline
+10. Approving the canonical mission/narrative statement
 
 ---
 
