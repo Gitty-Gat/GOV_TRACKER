@@ -1,6 +1,6 @@
 # Civic Ledger Verification Matrix
 
-_Last updated: 2026-04-10_
+_Last updated: 2026-04-14_
 
 ## Purpose
 This file is the single verification surface for Civic Ledger. It turns the repo's tests, scripts, routes, and production automation into one explicit checklist so MVP health is not inferred from scattered files.
@@ -30,4 +30,5 @@ This file is the single verification surface for Civic Ledger. It turns the repo
 ## Notes
 - This matrix intentionally distinguishes repo-backed verification from deployment-backed verification.
 - Committed local tests give strong confidence in the product surface and scoring semantics, but this file should not be read as a fresh execution log unless dated run results are appended.
-- The main remaining verification gap is operational observation of the production refresh/deploy path, not missing application structure.
+- Repo-backed launch controls were rechecked on 2026-04-14 against the current files instead of carrying forward older governance text by inertia: `.github/workflows/refresh-data.yml` still runs daily at `0 10 * * *`, sets up Python `3.13`, installs requirements, seeds baseline snapshots, and then refreshes the read model with `--refresh-promises`; `scripts/refresh_directory_metrics.py` still refreshes up to 120 officials and warms 24 cards in both `name` and `money_desc`; `scripts/deploy_render.py` still targets branch `main`, plan `free`, region `oregon`, and `/healthz`.
+- The main remaining verification gap is still operational observation of the production refresh/deploy path, not missing application structure.

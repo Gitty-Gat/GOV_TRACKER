@@ -1,6 +1,6 @@
 # Civic Ledger MVP Acceptance and Launch Checklist
 
-_Last updated: 2026-04-10_
+_Last updated: 2026-04-14_
 
 ## Purpose
 This file defines what must be true before calling Civic Ledger "MVP done" or treating it as launch-ready. It exists to stop endless prelaunch drift and to prevent vague claims of readiness.
@@ -55,4 +55,4 @@ Acceptance rule:
 - [ ] record any failures instead of inferring readiness from repo shape alone
 
 ## Launch posture right now
-**Current posture:** repo structure and launch governance are in place, but an honest MVP-done call still depends on observed GitHub Actions refresh proof, observed live deploy smoke, and dated verification results rather than repo shape alone.
+**Current posture:** repo structure and launch governance are in place, and the repo-backed launch controls were rechecked on 2026-04-14. An honest MVP-done call still depends on observed GitHub Actions refresh proof, observed live deploy smoke, and dated verification results rather than repo shape alone.
