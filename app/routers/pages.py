@@ -6,11 +6,12 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from app.paths import TEMPLATES_DIR
 from app.services.dashboard import DashboardService, _sort_key
 from app.services.scoring import summarize_finance_alignment
 
 router = APIRouter(tags=["pages"])
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 service = DashboardService()
 
 DEFINITION_ITEMS = [

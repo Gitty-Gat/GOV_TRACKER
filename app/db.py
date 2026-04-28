@@ -15,6 +15,7 @@ except ImportError:  # pragma: no cover - psycopg is optional for local SQLite f
     dict_row = None
 
 from app.models import OfficialCard
+from app.paths import PROJECT_ROOT
 from app.settings import get_settings
 
 
@@ -27,7 +28,8 @@ class Database:
         settings = get_settings()
         self.database_url = settings.database_url
         self.backend = "postgres" if self.database_url and not self.database_url.startswith("sqlite") else "sqlite"
-        self.database_path = Path(database_path or settings.database_path)
+        configured_path = Path(database_path or settings.database_path)
+        self.database_path = configured_path if configured_path.is_absolute() else PROJECT_ROOT / configured_path
         self._persistent_connection: Any | None = None
         if self.backend == "sqlite":
             self.database_path.parent.mkdir(parents=True, exist_ok=True)

@@ -4,6 +4,8 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.paths import ENV_FILE
+
 
 class Settings(BaseSettings):
     app_name: str = "Civic Ledger"
@@ -28,7 +30,7 @@ class Settings(BaseSettings):
     render_api_url: str = "https://api.render.com/v1"
     preferred_deploy_target: Literal["vercel", "render"] = "render"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=str(ENV_FILE), env_file_encoding="utf-8", extra="ignore")
 
 
 @lru_cache

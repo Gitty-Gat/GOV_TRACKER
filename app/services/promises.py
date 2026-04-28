@@ -4,7 +4,6 @@ import json
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 
 import requests
@@ -12,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from app.db import Database
 from app.models import PromiseItem
+from app.paths import MANUAL_PROMISES_PATH
 from app.services.scoring import annotate_promise_evidence
 from app.settings import get_settings
 
@@ -34,7 +34,7 @@ class PromiseService:
     def __init__(self, db: Database | None = None) -> None:
         self.settings = get_settings()
         self.db = db or Database()
-        self.manual_path = Path("data/manual_promises.json")
+        self.manual_path = MANUAL_PROMISES_PATH
 
     def get_promises(self, member: dict[str, Any], force: bool = False) -> list[PromiseItem]:
         bioguide_id = member["bioguideId"]
