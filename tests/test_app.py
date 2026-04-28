@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -165,7 +167,7 @@ def test_officeholders_page_uses_collapsible_score_guide(monkeypatch):
         activity_status="seeded",
         promises_status="pending",
     )
-    monkeypatch.setattr(pages.service, "list_officials", lambda *args, **kwargs: [card])
+    monkeypatch.setattr(pages, "service", SimpleNamespace(list_officials=lambda *args, **kwargs: [card]))
 
     client = TestClient(app)
     response = client.get("/officeholders")
@@ -188,7 +190,7 @@ def test_definitions_page_renders_beginner_terms():
 
 
 def test_seeded_profile_does_not_render_fake_verdict_or_zero_finance(monkeypatch):
-    monkeypatch.setattr(pages.service, "get_official_detail", lambda *args, **kwargs: _seeded_detail_fixture())
+    monkeypatch.setattr(pages, "service", SimpleNamespace(get_official_detail=lambda *args, **kwargs: _seeded_detail_fixture()))
 
     client = TestClient(app)
     response = client.get("/officials/A000370")
@@ -201,7 +203,7 @@ def test_seeded_profile_does_not_render_fake_verdict_or_zero_finance(monkeypatch
 
 
 def test_enriched_profile_renders_bill_summary_and_formula(monkeypatch):
-    monkeypatch.setattr(pages.service, "get_official_detail", lambda *args, **kwargs: _enriched_detail_fixture())
+    monkeypatch.setattr(pages, "service", SimpleNamespace(get_official_detail=lambda *args, **kwargs: _enriched_detail_fixture()))
 
     client = TestClient(app)
     response = client.get("/officials/B001299")
@@ -214,7 +216,7 @@ def test_enriched_profile_renders_bill_summary_and_formula(monkeypatch):
 
 
 def test_api_official_detail_exposes_readiness_and_nullable_verdict(monkeypatch):
-    monkeypatch.setattr(api.service, "get_official_detail", lambda *args, **kwargs: _seeded_detail_fixture())
+    monkeypatch.setattr(api, "service", SimpleNamespace(get_official_detail=lambda *args, **kwargs: _seeded_detail_fixture()))
 
     client = TestClient(app)
     response = client.get("/api/officials/A000370")

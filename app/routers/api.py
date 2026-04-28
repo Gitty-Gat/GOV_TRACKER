@@ -5,7 +5,14 @@ from fastapi import APIRouter, HTTPException, Query
 from app.services.dashboard import DashboardService
 
 router = APIRouter(prefix="/api", tags=["api"])
-service = DashboardService()
+service: DashboardService | None = None
+
+
+def get_service() -> DashboardService:
+    global service
+    if service is None:
+        service = DashboardService()
+    return service
 
 
 @router.get("/officials")
@@ -16,14 +23,14 @@ def list_officials(
     state: str | None = Query(default=None),
     sort: str = Query(default="name"),
 ):
-    officials = service.list_officials(search=search, chamber=chamber, party=party, state=state, sort_by=sort)
+    officials = get_service().list_officials(search=search, chamber=chamber, party=party, state=state, sort_by=sort)
     return {"results": [official.model_dump(mode="json") for official in officials], "count": len(officials)}
 
 
 @router.get("/officials/{bioguide_id}")
 def get_official(bioguide_id: str):
     try:
-        detail = service.get_official_detail(bioguide_id)
+        detail = get_service().get_official_detail(bioguide_id)
     except (KeyError, IndexError) as exc:
         raise HTTPException(status_code=404, detail="Official not found") from exc
     return detail.model_dump(mode="json")

@@ -12,7 +12,14 @@ from app.services.scoring import summarize_finance_alignment
 
 router = APIRouter(tags=["pages"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-service = DashboardService()
+service: DashboardService | None = None
+
+
+def get_service() -> DashboardService:
+    global service
+    if service is None:
+        service = DashboardService()
+    return service
 
 DEFINITION_ITEMS = [
     {
@@ -82,7 +89,7 @@ def officeholders(
     sort: str = Query(default="name"),
     page: int = Query(default=1),
 ):
-    all_officials = service.list_officials()
+    all_officials = get_service().list_officials()
     officials = [
         official
         for official in all_officials
@@ -131,7 +138,7 @@ def definitions(request: Request):
 
 @router.get("/officials/{bioguide_id}", response_class=HTMLResponse)
 def official_detail(request: Request, bioguide_id: str):
-    detail = service.get_official_detail(bioguide_id)
+    detail = get_service().get_official_detail(bioguide_id)
     finance_signal = summarize_finance_alignment(detail.finance.constituent_share, detail.finance.pac_share)
     promise_delivery_rows = _build_promise_delivery_rows(detail)
     return templates.TemplateResponse(
